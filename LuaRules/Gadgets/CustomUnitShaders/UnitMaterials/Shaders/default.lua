@@ -122,14 +122,14 @@ return {
     #else
        vec3 normal = normalize(normalv);
     #endif
-       float a    = sqrt(max( dot(normal, sunPos), 0.0));
-       vec3 light = a * sunDiffuse + sunAmbient;
+       float a    = sqrt(max( dot(normal, sunPos) - 0.22, 0.0));
+       vec3 light = a * 1.16 * sunDiffuse + sunAmbient;
 
        vec4 extraColor  = texture2D(textureS3o2, gl_TexCoord[0].st);
 
        vec3 reflectDir = reflect(cameraDir, normal);
-       vec3 specular   = textureCube(specularTex, reflectDir).rgb * extraColor.g * 4.0;
-       vec3 reflection = textureCube(reflectTex,  reflectDir).rgb;
+       vec3 specular   = pow(textureCube(specularTex, reflectDir).rgb, vec3(1.5)) * extraColor.g * 5.0;
+       vec3 reflection = textureCube(reflectTex,  reflectDir).rgb * 0.75;
 
     #ifdef use_shadows
        vec4 shadowTC = shadowpos;
