@@ -122,7 +122,7 @@ return {
     #else
        vec3 normal = normalize(normalv);
     #endif
-       float a    = max( dot(normal, sunPos), 0.0);
+       float a    = sqrt(max( dot(normal, sunPos), 0.0));
        vec3 light = a * sunDiffuse + sunAmbient;
 
        vec4 extraColor  = texture2D(textureS3o2, gl_TexCoord[0].st);
