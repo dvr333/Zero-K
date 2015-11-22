@@ -47,7 +47,7 @@ void main(void)
 #endif
 	//vec3 light = max(dot(normal, sunDir) > 0.0 ? 1.0 : 0.0, 0.0) * sunDiffuse + sunAmbient;
 	//vec3 light = max(dot(normal, sunDir), 0.0) * sunDiffuse + sunAmbient;
-	vec3 light = sqrt(max(dot(normal, sunDir) - 0.22, 0.0)) * sunDiffuse * 1.16 + sunAmbient;
+	vec3 light = (sqrt(max(dot(normal, sunDir) - 0.22, 0.0))) * sunDiffuse * 1.132 + sunAmbient;
 
 	vec4 diffuse     = texture2D(textureS3o1, gl_TexCoord[0].st);
 	vec4 extraColor  = texture2D(textureS3o2, gl_TexCoord[0].st);
@@ -59,7 +59,7 @@ void main(void)
 	//vec3 specular   = (specularLum > 0.5 ? specularColor/vec3(max(specularLum, 0.0001)) : vec3(0.0)) * extraColor.g * 4.0;
 	vec3 specular   = specularColor * extraColor.g * 5.0;
 	//vec3 specular   = specularColor * extraColor.g * 4.0;
-	vec3 reflection = textureCube(reflectTex,  reflectDir).rgb * 0.75;
+	vec3 reflection = textureCube(reflectTex,  reflectDir).rgb * 0.65;
 
 #if (USE_SHADOWS == 1)
 	float shadow = shadow2DProj(shadowTex, gl_TexCoord[1] + vec4(0.0, 0.0, -0.00005, 0.0)).r;
@@ -106,7 +106,7 @@ void main(void)
 		lightScale *= ((vectorDot < cutoffDot)? 0.0: 1.0);
 
 		gl_FragColor.rgb += (lightScale *                                  gl_LightSource[BASE_DYNAMIC_MODEL_LIGHT + i].ambient.rgb);
-		gl_FragColor.rgb += (lightScale * lightAttenuation * (diffuse.rgb * gl_LightSource[BASE_DYNAMIC_MODEL_LIGHT + i].diffuse.rgb * pow(max(lightCosAngDiff - 0.3, 0.0), 0.4)));
+		gl_FragColor.rgb += (lightScale * lightAttenuation * (diffuse.rgb * gl_LightSource[BASE_DYNAMIC_MODEL_LIGHT + i].diffuse.rgb * sqrt(max(lightCosAngDiff - 0.22, 0.0)) * 1.132));
 		gl_FragColor.rgb += (lightScale * lightAttenuation * (specular.rgb * gl_LightSource[BASE_DYNAMIC_MODEL_LIGHT + i].specular.rgb * pow(lightCosAngSpec, 4.0)));
 	}
 	#endif

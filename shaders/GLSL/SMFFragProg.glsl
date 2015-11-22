@@ -363,7 +363,7 @@ void main() {
 
 #ifndef DEFERRED_MODE
 	//float cosAngleDiffuse = clamp(dot(lightDir.xyz, normal), 0.0, 1.0);
-	float cosAngleDiffuse = pow(clamp(dot(lightDir.xyz, normal) - 0.2, 0.0, 1.0), 0.5);
+	float cosAngleDiffuse = sqrt(clamp(dot(lightDir.xyz, normal) - 0.22, 0.0, 1.0));
 	float cosAngleSpecular = clamp(dot(normalize(halfDir), normal), 0.001, 1.0);
 #endif
 
