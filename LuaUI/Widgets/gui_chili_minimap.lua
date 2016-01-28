@@ -57,6 +57,8 @@ local tabbedMode = false
 local usingNewEngine = (#{Spring.GetLosViewColors()} == 5) -- newer engine has radar2
 --local init = true
 
+WG.MinimapDraggingCamera = false --Boolean, false if selection through minimap is possible
+
 local function toggleTeamColors()
 	if WG.LocalColor and WG.LocalColor.localTeamColorToggle then
 		WG.LocalColor.localTeamColorToggle()
@@ -523,8 +525,10 @@ function widget:Update() --Note: these run-once codes is put here (instead of in
 		return
 	end
 	if not updateRunOnceRan then
-		setSensorState(options.initialSensorState.value)
-		updateRadarColors()
+		if Spring.GetGameFrame() > 0 then
+			setSensorState(options.initialSensorState.value)
+			updateRadarColors()
+		end
 		options.use_map_ratio.OnChange(options.use_map_ratio) -- Wait for docking to provide saved window size
 		updateRunOnceRan = true
 	end
@@ -538,7 +542,14 @@ function widget:Update() --Note: these run-once codes is put here (instead of in
 		Chili.Screen0:AddChild(window)
 		tabbedMode = false
 	end
+
+	WG.MinimapDraggingCamera = options.leftClickOnMinimap.value == 'camera' or leftClickDraggingCamera
 	-- widgetHandler:RemoveCallIn("Update") -- remove update call-in since it only need to run once. ref: gui_ally_cursors.lua by jK
+end
+
+function widget:GameStart()
+	setSensorState(options.initialSensorState.value)
+	updateRadarColors()
 end
 
 local function MakeMinimapButton(file, params)
@@ -926,6 +937,8 @@ function widget:Shutdown()
 	if (window) then
 		window:Dispose()
 	end
+
+	WG.MinimapDraggingCamera = nil
 end 
 
 local lx, ly, lw, lh, last_window_x, last_window_y

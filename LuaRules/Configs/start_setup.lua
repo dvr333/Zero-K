@@ -8,6 +8,13 @@ startUnits = {
 	commbasic = 'commbasic',
 }
 
+aiCommanders = {
+	[UnitDefNames["dyntrainer_recon_base"].id] = true,
+	[UnitDefNames["dyntrainer_support_base"].id] = true,
+	[UnitDefNames["dyntrainer_assault_base"].id] = true,
+	[UnitDefNames["dyntrainer_strike_base"].id] = true,
+}
+
 local trainerComms = VFS.Include("LuaRules/Configs/comm_trainer_defs.lua")
 for name, def in pairs(trainerComms) do
 	startUnits[name] = def[1]
@@ -42,5 +49,6 @@ BASE_COMM_COST = UnitDefNames.armcom1.metalCost or 1200
 
 COMM_SELECT_TIMEOUT = 30 * 15 -- 15 seconds
 
-DEFAULT_UNIT = "comm_trainer_strike"		--FIXME: hardcodey until I cba to identify precise source of problem
-DEFAULT_UNIT_TEAMSIDES = "Strike Trainer"
+DEFAULT_UNIT = "dyntrainer_assault_base"
+DEFAULT_UNIT_NAME = "Guardian Trainer"
+

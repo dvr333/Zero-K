@@ -82,7 +82,8 @@ local gridLocation = {}
 ------------------------
 ------------------------
 options_path = 'Settings/HUD Panels/Command Panel'
-options_order = { 'background_opacity', 'disablesmartselect', 'hidetabs', 'unitstabhotkey', 'unitshotkeyrequiremeta', 'unitshotkeyaltaswell', 'tab_factory', 'tab_economy', 'tab_defence', 'tab_special','old_menu_at_shutdown'}
+options_order = { 'background_opacity', 'disablesmartselect', 'hidetabs', 'unitstabhotkey', 'unitshotkeyrequiremeta', 'unitshotkeyaltaswell', 
+					'tab_factory', 'tab_economy', 'tab_defence', 'tab_special','old_menu_at_shutdown','hide_when_spectating'}
 options = {
 	background_opacity = {
 		name = "Opacity",
@@ -146,6 +147,11 @@ options = {
 		advanced = true,
 		value = true,
 	},
+	hide_when_spectating = {
+		name = 'Hide when Spectating',
+		type = 'bool',
+		value = false,
+	},
 }
 
 
@@ -159,6 +165,7 @@ local spGetSelectedUnits = Spring.GetSelectedUnits
 local spGetUnitWeaponState 	= Spring.GetUnitWeaponState
 local spGetGameFrame 		= Spring.GetGameFrame
 local spGetUnitRulesParam	= Spring.GetUnitRulesParam
+local spGetSpectatingState = Spring.GetSpectatingState
 
 local push        = table.insert
 
@@ -248,6 +255,7 @@ local alreadyRemovedTag = {}
 
 local hotkeyMode = false
 local recentlyInitialized = false
+local wasPlaying = false
 
 local gridKeyMap = {
 	[KEYSYMS.Q] = {1,1}, 
@@ -380,6 +388,7 @@ local function MakeButton(container, cmd, insertItem, index)
 				backgroundColor = {0,0,0,0},
 				isStructure = true;
 				cmdid = "fake",
+				fake = true,
 				HitTest = function (self, x, y) return false end,	
 			}
 		end
@@ -1196,7 +1205,7 @@ function widget:KeyPress(key, modifier, isRepeat)
 		local pos = gridKeyMap[key]
 		if pos and sp_commands[pos[1]] and sp_commands[pos[1]].children[pos[2]] then
 			local cmdid = sp_commands[pos[1]].children[pos[2]]
-			if cmdid then
+			if cmdid and not cmdid.fake then
 				cmdid = cmdid.cmdid
 				if cmdid then 
 					local index = Spring.GetCmdDescIndex(cmdid)
@@ -1214,7 +1223,7 @@ function widget:KeyPress(key, modifier, isRepeat)
 		local pos = gridKeyMap[key]
 		if pos and pos[1] ~= 3 and sp_commands[pos[1]] and sp_commands[pos[1]].children[pos[2]] then
 			local cmdid = sp_commands[pos[1]].children[pos[2]]
-			if cmdid then
+			if cmdid and not cmdid.fake then
 				cmdid = cmdid.cmdid
 				if cmdid then 
 					local index = Spring.GetCmdDescIndex(cmdid)
@@ -1326,6 +1335,7 @@ function widget:Initialize()
 	Spring.ForceLayoutUpdate()
 	
 	recentlyInitialized = true
+	wasPlaying = not spGetSpectatingState()
 	
 	RemoveAction("nextmenu")
 	RemoveAction("prevmenu")	
@@ -1623,10 +1633,15 @@ function widget:Update()
 		recentlyInitialized = false
 		ColorTabs(1)
 	end
+	if wasPlaying == spGetSpectatingState() then
+		wasPlaying = not wasPlaying
+		options.hide_when_spectating.OnChange()
+	end
 end
 
 --This function update construction progress bar and weapon reload progress bar
 function widget:GameFrame(n)
+	if options.hide_when_spectating.value and spGetSpectatingState() then return end
 	--set progress bar
 	if n%6 == 0 then
 		if menuChoice == 6 and selectedFac and buildRowButtons[1] and buildRowButtons[1].image then
@@ -1771,4 +1786,15 @@ options.hidetabs.OnChange = function(self)
 	end
 	menuChoice = 1
 	ColorTabs(1)
+end
+
+options.hide_when_spectating.OnChange = function(self) 	
+	if self.value and spGetSpectatingState() then 
+		window:RemoveChild(fakewindow)
+		window:RemoveChild(menuTabRow)
+	else
+		window:AddChild(fakewindow)
+		window:AddChild(menuTabRow)
+	end
+	ColorTabs()
 end

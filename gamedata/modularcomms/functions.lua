@@ -19,7 +19,47 @@ mapWeaponToCEG = {
 	[5] = {1,2},
 }
 
+
+function DynamicApplyWeapon(unitDef, weapon, slot)
+	if not weapons[weapon] then
+		Spring.Echo("Cannont find weapon", weapon)
+	end
+	
+	slot = slot or (#unitDef.weapons + 1)
+	
+	weapons[weapon].customparams = weapons[weapon].customparams or {}
+	local wcp = weapons[weapon].customparams
+	
+	unitDef.weapons = unitDef.weapons or {}
+	unitDef.weapondefs = unitDef.weapondefs or {}
+	
+	unitDef.weapons[slot] = {
+		def = weapon,
+		badtargetcategory = wcp.badtargetcategory or [[FIXEDWING]],
+		onlytargetcategory = wcp.onlytargetcategory or [[FIXEDWING LAND SINK SHIP SWIM FLOAT GUNSHIP HOVER]],
+	}
+	unitDef.weapondefs[weapon] = CopyTable(weapons[weapon], true)
+
+	-- upgrade by level -- no longer used
+	local wd = unitDef.weapondefs[weapon]
+
+	-- add CEGs
+	unitDef.sfxtypes = unitDef.sfxtypes or {}
+	unitDef.sfxtypes.explosiongenerators = unitDef.sfxtypes.explosiongenerators or {}
+	
+	unitDef.sfxtypes.explosiongenerators[6 + slot*2] = wcp.muzzleeffectfire or ("custom:NONE" .. (6 + slot*2))
+	unitDef.sfxtypes.explosiongenerators[7 + slot*2] = wcp.muzzleeffectshot or ("custom:NONE" .. (7 + slot*2))
+	
+	--unitDef.sfxtypes.explosiongenerators[6 + slot*2] = ("custom:NONE" .. (6 + slot*2))
+	--unitDef.sfxtypes.explosiongenerators[7 + slot*2] = ("custom:NONE" .. (7 + slot*2))
+end
+
 function ApplyWeapon(unitDef, weapon, replace, forceslot)
+	if unitDef.customparams.dynamic_comm then
+		DynamicApplyWeapon(unitDef, weapon, replace and forceslot)
+		return
+	end
+	
 	weapons[weapon].customparams = weapons[weapon].customparams or {}
 	local wcp = weapons[weapon].customparams
 	local slot = tonumber(wcp.slot) or 5
@@ -35,6 +75,9 @@ function ApplyWeapon(unitDef, weapon, replace, forceslot)
 	slot = forceslot or slot
 	
 	--Spring.Echo(weapons[weapon].name .. " into slot " .. slot)
+	
+	unitDef.weapons = unitDef.weapons or {}
+	unitDef.weapondefs = unitDef.weapondefs or {}
 	
 	unitDef.weapons[slot] = {
 		def = weapon,
@@ -76,21 +119,6 @@ function ApplyWeapon(unitDef, weapon, replace, forceslot)
 end
 
 function RemoveWeapons(unitDef) 
--- because for some reason comms have a default weapon with no purpose and I don't want to screw with that
-	if unitDef.weapons then
-		for i=3,6 do
-			if unitDef.weapons[i] then
-				unitDef.weapons[i] = nil
-			end
-		end
-	end
-	
-	-- give unarmed comms a peashooter or two
-	ApplyWeapon(unitDef, "commweapon_peashooter", true, 5)
-	if ((tonumber(unitDef.customparams.level) or 0) >= 3) then
-		ApplyWeapon(unitDef, "commweapon_peashooter", true, 3)
-	end
-	--unitDef.customparams.alreadyhasweapon = nil
 end
 
 function ReplaceWeapon(unitDef, oldWeapon, newWeapon)

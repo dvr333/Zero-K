@@ -9,7 +9,7 @@ function widget:GetInfo()
     date      = "29 December 2015",
     license   = "GNU GPL, v2 or later",
 	handler   = true,
-    layer     = 0,
+    layer     = -10,
     enabled   = true
   }
 end
@@ -50,7 +50,7 @@ local screen0
 -- * Callins. This block handles widget callins. Does barely anything.
 
 -- Module config
-local moduleDefs, emptyModules, chassisDefs = VFS.Include("LuaRules/Configs/dynamic_comm_defs.lua")
+local moduleDefs, chassisDefs, upgradeUtilities, UNBOUNDED_LEVEL, _, moduleDefNames = VFS.Include("LuaRules/Configs/dynamic_comm_defs.lua")
 
 VFS.Include("LuaRules/Configs/customcmds.h.lua")
 
@@ -72,6 +72,7 @@ local currentModuleList
 
 -- Button for viewing owned modules
 local viewAlreadyOwnedButton
+
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- New Module Selection Button Handling
@@ -121,7 +122,7 @@ local function UpdateNewSelectionButton(buttonIndex, moduleDefID)
 end
 
 local function GetNewSelectionButton(buttonIndex, moduleDefID)
-	if newButtons[moduleDefID] then
+	if newButtons[buttonIndex] then
 		UpdateNewSelectionButton(buttonIndex, moduleDefID)
 	else
 		AddNewSelectonButton(buttonIndex, moduleDefID)
@@ -274,11 +275,7 @@ local function ResetCurrentModules(newAlreadyOwned)
 	currentModulesBySlot = {}
     currentModulesByDefID = {}
 	alreadyOwnedModules = newAlreadyOwned
-	alreadyOwnedModulesByDefID = {}
-	for i = 1, #newAlreadyOwned do
-		local defID = newAlreadyOwned[i]
-		alreadyOwnedModulesByDefID[defID] = (alreadyOwnedModulesByDefID[defID] or 0) + 1
-	end
+	alreadyOwnedModulesByDefID = upgradeUtilities.ModuleListToByDefID(newAlreadyOwned)
 end
 
 local function GetCurrentModules()
@@ -289,8 +286,8 @@ local function GetAlreadyOwned()
 	return alreadyOwnedModules
 end
 
-local function GetSlotModule(slot, slotType)
-	return currentModulesBySlot[slot] or emptyModules[slotType]
+local function GetSlotModule(slot, emptyModule)
+	return currentModulesBySlot[slot] or emptyModule
 end
 
 local function UpdateSlotModule(slot, moduleDefID)
@@ -308,50 +305,47 @@ local function UpdateSlotModule(slot, moduleDefID)
 	currentModulesByDefID[moduleDefID] = (currentModulesByDefID[moduleDefID] or 0) + 1
 end
 
-local function ModuleIsValid(level, chassis, slotType, slotIndex)
+local function ModuleIsValid(level, chassis, slotAllows, slotIndex)
 	local moduleDefID = currentModulesBySlot[slotIndex]
-	local data = moduleDefs[moduleDefID]
-	if data.slotType ~= slotType or (data.requireLevel or 0) > level or (data.requireChassis and (not data.requireChassis[chassis])) then
-		return false
-	end
-	
-	-- Check that requirements are met
-	if data.requireModules then
-		for j = 1, #data.requireModules do
-			-- Modules should not depend on themselves so this check is simplier than the
-			-- corresponding chcek in the replacement set generator.
-			local req = data.requireModules[j]
-			if not (alreadyOwnedModulesByDefID[req] or currentModulesByDefID[req]) then
-				return false
-			end
-		end
-	end
-	
-	-- Check that the module limit is not reached
-	if data.limit and (currentModulesByDefID[moduleDefID] or alreadyOwnedModulesByDefID[moduleDefID]) then
-		local count = (currentModulesByDefID[moduleDefID] or 0) + (alreadyOwnedModulesByDefID[moduleDefID] or 0) 
-		if count > data.limit then
-			return false
-		end
-	end
-	return true
+	return upgradeUtilities.ModuleIsValid(level, chassis, slotAllows, moduleDefID, alreadyOwnedModulesByDefID, currentModulesByDefID)
 end
 
-local function GetNewReplacementSet(level, chassis, slotType, ignoreSlot)
+local function GetNewReplacementSet(level, chassis, slotAllows, ignoreSlot)
 	local replacementSet = {}
+	local haveEmpty = false
 	for i = 1, #moduleDefs do
 		local data = moduleDefs[i]
-		if data.slotType == slotType and (data.requireLevel or 0) <= level and ((not data.requireChassis) or data.requireChassis[chassis]) then
+		if slotAllows[data.slotType] and (data.requireLevel or 0) <= level and 
+				((not data.requireChassis) or data.requireChassis[chassis]) and not data.unequipable then
 			local accepted = true
 			
 			-- Check whether required modules are present, not counting ignored slot
-			if data.requireModules then
-				for j = 1, #data.requireModules do
-					local req = data.requireModules[j]
-					if not (alreadyOwnedModulesByDefID[req] or 
+			if data.requireOneOf then
+				local foundRequirement = false
+				for j = 1, #data.requireOneOf do
+					local req = data.requireOneOf[j]
+					if (alreadyOwnedModulesByDefID[req] or 
 						(currentModulesByDefID[req] and 
 							(currentModulesBySlot[ignoreSlot] ~= req or 
 							currentModulesByDefID[req] > 1))) then
+						
+						foundRequirement = true
+						break
+					end
+				end
+				if not foundRequirement then
+					accepted = false
+				end
+			end
+			
+			-- Check whether prohibited modules are present, not counting ignored slot
+			if accepted and data.prohibitingModules then
+				for j = 1, #data.prohibitingModules do
+					local prohibit = data.prohibitingModules[j]
+					if (alreadyOwnedModulesByDefID[prohibit] or 
+						(currentModulesByDefID[prohibit] and 
+							(currentModulesBySlot[ignoreSlot] ~= prohibit or 
+							currentModulesByDefID[prohibit] > 1))) then
 						
 						accepted = false
 						break
@@ -370,6 +364,16 @@ local function GetNewReplacementSet(level, chassis, slotType, ignoreSlot)
 				end
 			end
 			
+			-- Only put one empty module in the accepted set (for the case of slots which allow two or more types)
+			if accepted and data.emptyModule then
+				if haveEmpty then
+					accepted = false
+				else
+					haveEmpty = true
+				end
+			end
+			
+			-- Add the module once accepted
 			if accepted then
 				replacementSet[#replacementSet + 1] = i
 			end
@@ -474,7 +478,7 @@ local function ModuleReplacmentWithButton(slotIndex, moduleDefID)
 	UpdateSlotModule(slotIndex, moduleDefID)
 end
 
-local function GetCurrentModuleButton(moduleDefID, slotIndex, level, chassis, slotType)
+local function GetCurrentModuleButton(moduleDefID, slotIndex, level, chassis, slotAllows, empty)
 	if not currentModuleButton[slotIndex] then
 		AddCurrentModuleButton(slotIndex, moduleDefID)
 	end
@@ -484,8 +488,9 @@ local function GetCurrentModuleButton(moduleDefID, slotIndex, level, chassis, sl
 	
 	current.level = level
 	current.chassis = chassis
-	current.slotType = slotType
-	current.replacementSet = GetNewReplacementSet(level, chassis, slotType, slotIndex)
+	current.slotAllows = slotAllows
+	current.empty = empty
+	current.replacementSet = GetNewReplacementSet(level, chassis, slotAllows, slotIndex)
 
 	ModuleReplacmentWithButton(slotIndex, moduleDefID)
 	
@@ -501,21 +506,30 @@ function SelectNewModule(moduleDefID)
 	
 	-- Check whether module choices are still valid
 	local requireUpdate = true
-	while requireUpdate do
+	local newCost = 0
+	for repeatBreak = 1, 2 * #currentModuleData do
+		newCost = 0
 		requireUpdate = false
 		for i = 1, #currentModuleData do
 			local data = currentModuleData[i]
-			if not ModuleIsValid(data.level, data.chassis, data.slotType, i) then
+			if ModuleIsValid(data.level, data.chassis, data.slotAllows, i) then
+				newCost = newCost + moduleDefs[GetSlotModule(i, data.empty)].cost
+			else
 				requireUpdate = true
-				ModuleReplacmentWithButton(i, emptyModules[data.slotType])
+				ModuleReplacmentWithButton(i, data.empty)
 			end
 		end
+		if not requireUpdate then
+			break
+		end
 	end
+	
+	UpdateMorphCost(newCost)
 	
 	-- Update each replacement set
 	for i = 1, #currentModuleData do
 		local data = currentModuleData[i]
-		data.replacementSet = GetNewReplacementSet(data.level, data.chassis, data.slotType, i)
+		data.replacementSet = GetNewReplacementSet(data.level, data.chassis, data.slotAllows, i)
 	end
 	
 	ShowModuleSelection(currentModuleData[activeSlotIndex].replacementSet)
@@ -526,10 +540,17 @@ end
 -- Main Module Window Handling
 
 local mainWindowShown = false
-local mainWindow
+local mainWindow, timeLabel, costLabel, morphBuildPower
+
+function UpdateMorphCost(newCost)
+	newCost = (newCost or 0) + morphBaseCost
+	costLabel:SetCaption(math.floor(newCost))
+	timeLabel:SetCaption(math.floor(newCost/morphBuildPower))
+end
 
 local function HideMainWindow()
 	if mainWindowShown then
+		SaveModuleLoadout()
 		screen0:RemoveChild(mainWindow)
 		mainWindowShown = false
 	end
@@ -585,38 +606,57 @@ local function CreateMainWindow()
 		centerItems = false,
 	}
 	
-	local timeLabel = Chili.Label:New{
-		x = 20,
-		right  = 0,
-		bottom  = 110,
-		height = 35,
-		valign = "center",
-		align  = "left",
-		caption = "Time:",
-		autosize = false,
-		font   = {size = 20, outline = true, color = {.8,.8,.8,.9}, outlineWidth = 2, outlineWeight = 2},
+	local cyan = {0,1,1,1}
+	
+	local timeImage = Image:New{
+		x = 15,
+		bottom  = 80,
+		file ='LuaUI/images/clock.png',
+		height = 24,
+		width = 24, 
+		keepAspect = true,
 	}
 	
-	local costLabel = Chili.Label:New{
-		x = 20,
+	timeLabel = Chili.Label:New{
+		x = 45,
 		right  = 0,
-		bottom  = 80,
-		height = 35,
-		valign = "center",
+		bottom  = 83,
+		valign = "top",
 		align  = "left",
-		caption = "Cost:",
+		caption = 0,
 		autosize = false,
-		font   = {size = 20, outline = true, color = {.8,.8,.8,.9}, outlineWidth = 2, outlineWeight = 2},
+		font    = {size = 24, outline = true, color = cyan, outlineWidth = 2, outlineWeight = 2},
+	}
+	
+	local costImage = Image:New{
+		x = 100,
+		bottom  = 80,
+		file ='LuaUI/images/cost.png',
+		height = 24,
+		width = 24, 
+		keepAspect = true,
+	}
+	
+	costLabel = Chili.Label:New{
+		x = 130,
+		right  = 0,
+		bottom  = 83,
+		valign = "top",
+		align  = "left",
+		caption = 0,
+		autosize = false,
+		font     = {size = 24, outline = true, color = cyan, outlineWidth = 2, outlineWeight = 2},
 	}
 	
 	local acceptButton = Button:New{
-		caption = "tick",
+		caption = "",
 		right = 135,
 		bottom = 15,
 		width = 55,
 		height = 55,
 		padding = {0, 0, 0, 0},	
 		backgroundColor = {0.5,0.5,0.5,0.5},
+		tooltip = "Start upgrade",
 		OnClick = {
 			function()
 				if mainWindowShown then
@@ -627,13 +667,14 @@ local function CreateMainWindow()
 	}
 	
 	viewAlreadyOwnedButton = Button:New{
-		caption = "eye",
+		caption = "",
 		right = 75,
 		bottom = 15,
 		width = 55,
 		height = 55,
 		padding = {0, 0, 0, 0},	
 		backgroundColor = {0.5,0.5,0.5,0.5},
+		tooltip = "View current modules",
 		OnClick = {
 			function(self)
 				AlreadyOwnedModuleClick(self)
@@ -642,18 +683,49 @@ local function CreateMainWindow()
 	}
 	
 	local cancelButton = Button:New{
-		caption = "cross",
+		caption = "",
 		right = 15,
 		bottom = 15,
 		width = 55,
 		height = 55,
 		padding = {0, 0, 0, 0},	
 		backgroundColor = {0.5,0.5,0.5,0.5},
+		tooltip = "Cancel module selection",
 		OnClick = {
 			function()
 				HideMainWindow()
 			end
 		},
+	}
+	
+	Image:New{
+		x = 2,
+		right = 2,
+		y = 0,
+		bottom = 0,
+		keepAspect = true,
+		file = "LuaUI/Images/dynamic_comm_menu/tick.png",
+		parent = acceptButton,
+	}
+	
+	Image:New{
+		x = 2,
+		right = 2,
+		y = 0,
+		bottom = 0,
+		keepAspect = true,
+		file = "LuaUI/Images/dynamic_comm_menu/eye.png",
+		parent = viewAlreadyOwnedButton,
+	}
+	
+	Image:New{
+		x = 2,
+		right = 2,
+		y = 0,
+		bottom = 0,
+		keepAspect = true,
+		file = "LuaUI/Images/commands/Bold/cancel.png",
+		parent = cancelButton,
 	}
 	
 	local fakeWindow = Panel:New{
@@ -665,14 +737,25 @@ local function CreateMainWindow()
 		bottom = 0,
 		padding = {0, 0, 0, 0},	
 		backgroundColor = {1, 1, 1, 0.8},
-		children = {topLabel, currentModuleList, timeLabel, costLabel, acceptButton, viewAlreadyOwnedButton, cancelButton}
+		children = {topLabel, currentModuleList, timeImage, timeLabel, costImage, costLabel, acceptButton, viewAlreadyOwnedButton, cancelButton}
 	}
 end
 
-local function ShowModuleListWindow(slots, slotDefaults, level, chassis, alreadyOwnedModules)
+local function ShowModuleListWindow(slotDefaults, level, chassis, alreadyOwnedModules)
 	if not currentModuleList then
 		CreateMainWindow()
 	end
+	
+	if level > chassisDefs[chassis].maxNormalLevel then
+		morphBaseCost = chassisDefs[chassis].extraLevelCostFunction(level)
+		level = chassisDefs[chassis].maxNormalLevel
+		morphBuildPower = chassisDefs[chassis].levelDefs[level].morphBuildPower
+	else
+		morphBaseCost = chassisDefs[chassis].levelDefs[level].morphBaseCost
+		morphBuildPower = chassisDefs[chassis].levelDefs[level].morphBuildPower
+	end
+	
+	local slots = chassisDefs[chassis].levelDefs[level].upgradeSlots
 
 	if not mainWindowShown then
 		screen0:AddChild(mainWindow)
@@ -696,17 +779,31 @@ local function ShowModuleListWindow(slots, slotDefaults, level, chassis, already
 	end
 	
 	-- Check that the module in each slot is valid
-	for i = 1, #slots do
-		local slotData = slots[i]
-		if not ModuleIsValid(level, chassis, slotData.slotType, i) then
-			UpdateSlotModule(i, emptyModules[slotData.slotType])
+	local requireUpdate = true
+	local newCost = 0
+	for repeatBreak = 1, 2 * #slots do
+		requireUpdate = false
+		newCost = 0
+		for i = 1, #slots do
+			local slotData = slots[i]
+			if ModuleIsValid(level, chassis, slotData.slotAllows, i) then
+				newCost = newCost + moduleDefs[GetSlotModule(i, slotData.empty)].cost
+			else
+				requireUpdate = true
+				UpdateSlotModule(i, slotData.empty)
+			end
+		end
+		if not requireUpdate then
+			break
 		end
 	end
+	
+	UpdateMorphCost(newCost)
 	
 	-- Actually add the default modules and slot data
 	for i = 1, #slots do
 		local slotData = slots[i]
-		currentModuleList:AddChild(GetCurrentModuleButton(GetSlotModule(i, slotData.slotType), i, level, chassis, slotData.slotType))
+		currentModuleList:AddChild(GetCurrentModuleButton(GetSlotModule(i, slotData.empty), i, level, chassis, slotData.slotAllows, slotData.empty))
 	end
 end
 
@@ -715,6 +812,7 @@ end
 -- Command Handling
 
 local upgradeSignature = {}
+local savedSlotLoadout = {}
 
 function SendUpgradeCommand(newModules)
 	table.sort(upgradeSignature.alreadyOwned)
@@ -728,12 +826,6 @@ function SendUpgradeCommand(newModules)
 		local chassis = Spring.GetUnitRulesParam(unitID, "comm_chassis")
 		if level == upgradeSignature.level and chassis == upgradeSignature.chassis then
 			local alreadyOwned = {}
-			local weaponCount = Spring.GetUnitRulesParam(unitID, "comm_weapon_count")
-			for i = 1, weaponCount do
-				local weapon = Spring.GetUnitRulesParam(unitID, "comm_weapon_" .. i)
-				alreadyOwned[#alreadyOwned + 1] = weapon
-			end
-			
 			local moduleCount = Spring.GetUnitRulesParam(unitID, "comm_module_count")
 			for i = 1, moduleCount do
 				local module = Spring.GetUnitRulesParam(unitID, "comm_module_" .. i)
@@ -742,17 +834,8 @@ function SendUpgradeCommand(newModules)
 			
 			table.sort(alreadyOwned)
 			
-			if #alreadyOwned == #upgradeSignature.alreadyOwned then
-				local validUnit = true
-				for i = 1, #alreadyOwned do
-					if alreadyOwned[i] ~= upgradeSignature.alreadyOwned[i] then
-						validUnit = false
-						break
-					end
-				end
-				if validUnit then
-					upgradableUnits[#upgradableUnits + 1] = unitID
-				end
+			if upgradeUtilities.ModuleSetsAreIdentical(alreadyOwned, upgradeSignature.alreadyOwned) then
+				upgradableUnits[#upgradableUnits + 1] = unitID
 			end
 		end
 	end
@@ -774,27 +857,35 @@ function SendUpgradeCommand(newModules)
 			params[index] = newModules[j]
 			index = index + 1
 		end
-		Spring.GiveOrderToUnitArray(upgradableUnits, CMD_MORPH_UPGRADE, params, {})
+		Spring.GiveOrderToUnitArray(upgradableUnits, CMD_MORPH_UPGRADE_INTERNAL, params, {})
 	end
 	
 	-- Remove main window
 	HideMainWindow()
 end
 
+function SaveModuleLoadout()
+	local currentModules = GetCurrentModules()
+	if not (upgradeSignature and currentModules) then
+		return
+	end
+	local profileID = upgradeSignature.profileID
+	local level = upgradeSignature.level
+	savedSlotLoadout[profileID] = savedSlotLoadout[profileID] or {}
+	savedSlotLoadout[profileID][level] = GetCurrentModules()
+end
+
 local function CreateModuleListWindowFromUnit(unitID)
 	local level = Spring.GetUnitRulesParam(unitID, "comm_level")
 	local chassis = Spring.GetUnitRulesParam(unitID, "comm_chassis")
+	local profileID = Spring.GetUnitRulesParam(unitID, "comm_profileID")
 	
-	local slotDefs = chassisDefs[chassis].upgradeSlots[level+1]
+	if not (chassisDefs[chassis] and chassisDefs[chassis].levelDefs[math.min(chassisDefs[chassis].maxNormalLevel, level+1)]) then
+		return
+	end
 	
 	-- Find the modules which are already owned
 	local alreadyOwned = {}
-	local weaponCount = Spring.GetUnitRulesParam(unitID, "comm_weapon_count")
-	for i = 1, weaponCount do
-		local weapon = Spring.GetUnitRulesParam(unitID, "comm_weapon_" .. i)
-		alreadyOwned[#alreadyOwned + 1] = weapon
-	end
-	
 	local moduleCount = Spring.GetUnitRulesParam(unitID, "comm_module_count")
 	for i = 1, moduleCount do
 		local module = Spring.GetUnitRulesParam(unitID, "comm_module_" .. i)
@@ -804,11 +895,27 @@ local function CreateModuleListWindowFromUnit(unitID)
 	-- Record the signature of the morphing unit for later application.
 	upgradeSignature.level = level
 	upgradeSignature.chassis = chassis
+	upgradeSignature.profileID = profileID
 	upgradeSignature.alreadyOwned = alreadyOwned
 	
+	-- Load default loadout
+	local slotDefaults = {}
+	if profileID and level then
+		if savedSlotLoadout[profileID] and savedSlotLoadout[profileID][level] then
+			slotDefaults = savedSlotLoadout[profileID][level]
+		else
+			local commProfileInfo = WG.ModularCommAPI.GetCommProfileInfo(profileID)
+			if commProfileInfo and commProfileInfo.modules and commProfileInfo.modules[level + 1] then
+				local defData = commProfileInfo.modules[level + 1]
+				for i = 1, #defData do
+					slotDefaults[i] = moduleDefNames[defData[i]]
+				end
+			end
+		end
+	end
+	
 	-- Create the window
-	windowOpen = true
-	ShowModuleListWindow(slotDefs, slotDefaults, level, chassis, alreadyOwned)
+	ShowModuleListWindow(slotDefaults, level + 1, chassis, alreadyOwned)
 end
 
 function widget:CommandNotify(cmdID, cmdParams, cmdOptions)
@@ -821,9 +928,12 @@ function widget:CommandNotify(cmdID, cmdParams, cmdOptions)
 	for i = 1, #units do
 		local unitID = units[i]
 		local level = Spring.GetUnitRulesParam(unitID, "comm_level")
-		if level and level < 5 then
-			upgradeID = unitID
-			break
+		if level and Spring.GetUnitRulesParam(unitID, "morphing") ~= 1 then
+			local chassis = Spring.GetUnitRulesParam(unitID, "comm_chassis")
+			if UNBOUNDED_LEVEL or chassisDefs[chassis].levelDefs[level+1] then
+				upgradeID = unitID
+				break
+			end
 		end
 	end
 	
@@ -837,29 +947,73 @@ end
 
 function widget:CommandsChanged()
 	local units = Spring.GetSelectedUnits()
-	local foundRulesParams = false
-	for i = 1, #units do
-		local unitID = units[i]
-		local level = Spring.GetUnitRulesParam(unitID, "comm_level")
-		if level and level < 5 then
-			foundRulesParams = true
-			break
+	if mainWindowShown then
+		local foundMatchingComm = false
+		for i = 1, #units do
+			local unitID = units[i]
+			local level = Spring.GetUnitRulesParam(unitID, "comm_level")
+			local chassis = Spring.GetUnitRulesParam(unitID, "comm_chassis")
+			if level == upgradeSignature.level and chassis == upgradeSignature.chassis then
+				local alreadyOwned = {}
+				local moduleCount = Spring.GetUnitRulesParam(unitID, "comm_module_count")
+				for i = 1, moduleCount do
+					local module = Spring.GetUnitRulesParam(unitID, "comm_module_" .. i)
+					alreadyOwned[#alreadyOwned + 1] = module
+				end
+				
+				table.sort(alreadyOwned)
+				
+				if upgradeUtilities.ModuleSetsAreIdentical(alreadyOwned, upgradeSignature.alreadyOwned) then
+					foundMatchingComm = true
+					break
+				end
+			end
+		end
+		
+		if foundMatchingComm then
+			local customCommands = widgetHandler.customCommands
+
+			customCommands[#customCommands+1] = {			
+				id      = CMD_UPGRADE_UNIT,
+				type    = CMDTYPE.ICON,
+				tooltip = 'Upgrade Commander',
+				cursor  = 'Repair',
+				action  = 'upgradecomm',
+				params  = {}, 
+				texture = 'LuaUI/Images/commands/Bold/build.png',
+			}
+		else
+			HideMainWindow() -- Hide window if no commander matching the window is selected
 		end
 	end
-	if foundRulesParams then
-		local customCommands = widgetHandler.customCommands
+	
+	if not mainWindowShown then
+		local foundRulesParams = false
+		for i = 1, #units do
+			local unitID = units[i]
+			local level = Spring.GetUnitRulesParam(unitID, "comm_level")
+			if level and Spring.GetUnitRulesParam(unitID, "morphing") ~= 1 then
+				local chassis = Spring.GetUnitRulesParam(unitID, "comm_chassis")
+				if UNBOUNDED_LEVEL or chassisDefs[chassis].levelDefs[level+1] then
+					foundRulesParams = true
+					break
+				end
+			end
+		end
+		
+		if foundRulesParams then
+			local customCommands = widgetHandler.customCommands
 
-		customCommands[#customCommands+1] = {			
-			id      = CMD_UPGRADE_UNIT,
-			type    = CMDTYPE.ICON,
-			tooltip = 'Upgrade Commander',
-			cursor  = 'Repair',
-			action  = 'upgradecomm',
-			params  = {}, 
-			texture = 'LuaUI/Images/commands/Bold/build.png',
-		}
-	else
-		HideMainWindow() -- Hide window if upgradables are deselected
+			customCommands[#customCommands+1] = {			
+				id      = CMD_UPGRADE_UNIT,
+				type    = CMDTYPE.ICON,
+				tooltip = 'Upgrade Commander',
+				cursor  = 'Repair',
+				action  = 'upgradecomm',
+				params  = {}, 
+				texture = 'LuaUI/Images/commands/Bold/build.png',
+			}
+		end
 	end
 end
 

@@ -30,12 +30,15 @@ Spring.Log = Spring.Log or function() end
 --	Weapon 6: unused
 --------------------------------------------------------------------------------
 
+VFS.Include("gamedata/modularcomms/moduledefs.lua")
+
+VFS.Include("gamedata/modularcomms/dyncomm_chassis_generator.lua")
 VFS.Include("gamedata/modularcomms/clonedefs.lua")
 
+local legacyTranslators = VFS.Include("gamedata/modularcomms/legacySiteDataTranslate.lua")
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-VFS.Include("gamedata/modularcomms/moduledefs.lua")
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -60,6 +63,8 @@ else
 		if not success then	-- execute Borat
 			err = commData
 			commData = {}
+		else
+			commData = legacyTranslators.TranslateModoption(commData)
 		end
 	end
 end
@@ -67,8 +72,50 @@ if err then
 	Spring.Log("gamedata/modularcomms/unitdefgen.lua", "warning", 'Modular Comms warning: ' .. err)
 end
 
-if not commData then commData = {} end
+do
+	local commDataPredefined = VFS.Include("gamedata/modularcomms/dyncomms_predefined.lua")
+	commData = MergeTable(commData, commDataPredefined)
+end
 
+for commProfileID, commProfile in pairs(commData) do
+	-- MAKE SURE THIS MATCHES api_modularcomms
+	commProfile.baseUnitName = commProfileID .. "_base"
+end
+
+local legacyToDyncommChassisMap = legacyTranslators.legacyToDyncommChassisMap
+
+local function GenerateLevel0DyncommsAndWrecks()
+	for commProfileID, commProfile in pairs(commData) do
+		Spring.Log("gamedata/modularcomms/unitdefgen.lua", "debug", "\tModularComms: Generating base dyncomm for " .. commProfile.name)
+		local unitName = commProfile.baseUnitName
+		
+		local chassis = commProfile.chassis
+		local mappedChassis = legacyToDyncommChassisMap[chassis] or "recon"
+		if mappedChassis then
+			chassis = mappedChassis
+		end
+		
+		UnitDefs[unitName] = CopyTable(UnitDefs["dyn" .. chassis .. "1"], true)
+		local ud = UnitDefs[unitName]
+		ud.name = commProfile.name
+		
+		local features = ud.featuredefs or {}
+		for featureName,array in pairs(features) do
+			local mult = 0.4
+			local typeName = "Wreckage"
+			if featureName == "heap" then
+				typeName = "Debris"
+				mult = 0.2 
+			end
+			array.description = typeName .. " - " .. commProfile.name
+			array.customparams = array.customparams or {}
+			array.customparams.unit = unitName
+		end
+		ud.featuredefs = features
+	end
+end
+
+GenerateLevel0DyncommsAndWrecks()
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- generate the baseline comm
@@ -167,8 +214,6 @@ local function ProcessComm(name, config)
 			reload = 0,
 		}
 		
-		RemoveWeapons(commDefs[name])
-		
 		-- process modules
 		if config.modules then
 			local modules = CopyTable(config.modules)
@@ -261,10 +306,6 @@ local function ProcessComm(name, config)
 	end
 end
 
-for name, config in pairs(commData) do
-	ProcessComm(name, config)
-end
-
 --stress test: try every possible module to make sure it doesn't crash
 local stressDefs = {}
 local stressChassis = {
@@ -333,7 +374,7 @@ for name, data in pairs(commDefs) do
 	end	
 	
 	-- set weapon1 range	- may need exception list in future depending on what weapons we add
-	if data.weapondefs then
+	if data.weapondefs and not data.customparams.dynamic_comm then
 		local maxRange = 0
 		local weaponRanges = {}
 		local weaponNames = {}
@@ -388,7 +429,7 @@ for name, data in pairs(commDefs) do
 	
 	-- rez speed
 	if data.canresurrect then 
-		data.resurrectspeed = data.workertime*0.8
+		data.resurrectspeed = data.workertime*0.4
 	end
 	
 	-- make sure weapons can hit their max range

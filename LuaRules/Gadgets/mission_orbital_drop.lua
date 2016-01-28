@@ -85,13 +85,13 @@ local function StartsWith(s, startString)
 end
 
 
-function GG.DropUnit(unitDefName, x, y, z, facing, teamID,useSetUnitVelocity,timeToGround, fallGravity,absSpawnHeight,absBrakeHeight)
+function GG.DropUnit(unitDefName, x, y, z, facing, teamID, useSetUnitVelocity, timeToGround, fallGravity, absSpawnHeight, absBrakeHeight, dyncommID)
   local gy = Spring.GetGroundHeight(x, z)
   if y < gy then 
     y = gy 
   end
-  local unitID = Spring.CreateUnit(unitDefName, x, y, z, facing, teamID)
-  if not Spring.ValidUnitID(unitID) then
+  local unitID = (dyncommID and GG.Upgrades_CreateStarterDyncomm and GG.Upgrades_CreateStarterDyncomm(dyncommID, x, y, z, facing, teamID)) or Spring.CreateUnit(unitDefName, x, y, z, facing, teamID)
+ if not Spring.ValidUnitID(unitID) then
     Spring.Echo("Orbital Drop error: unitID from" .. unitDefName .." is invalid. No orbital drop for this unit.")
 	return
   end
@@ -103,6 +103,9 @@ function GG.DropUnit(unitDefName, x, y, z, facing, teamID,useSetUnitVelocity,tim
     return unitID
   end
   local unitDef = UnitDefNames[unitDefName]
+  if (unitDef == nil) then -- dynamic comm
+    unitDef = UnitDefs[Spring.GetUnitDefID(unitID)]
+  end
   if not unitDef.isBuilding and unitDef.speed > 0 and Spring.GetGameFrame() > 1 and ((not timeToGround) or timeToGround > 0) then
 	timeToGround,fallGravity,absSpawnHeight,absBrakeHeight = timeToGround or defTimeToGround,fallGravity or defFallGravity,absSpawnHeight or defSpawnHeight,absBrakeHeight or defBrakeHeight --check input for NIL
     y = gy + absSpawnHeight+10 --spawn height

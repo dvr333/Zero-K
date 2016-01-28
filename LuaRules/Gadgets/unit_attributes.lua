@@ -57,6 +57,14 @@ local CMD_WAIT = CMD.WAIT
 
 local workingGroundMoveType = true -- not ((Spring.GetModOptions() and (Spring.GetModOptions().pathfinder == "classic") and true) or false)
 
+local speedFactorUnitDefs = {}
+for i = 1, #UnitDefs do
+	local ud = UnitDefs[i]
+	if ud.customParams and ud.customParams.att_speedmult then
+		speedFactorUnitDefs[i] = tonumber(ud.customParams.att_speedmult)
+	end
+end
+
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 -- Sensor Handling
@@ -88,15 +96,19 @@ for unitDefID,_ in pairs(hasSensorOrJamm) do
 	end
 end
 
-local function UpdateSensorAndJamm(unitID, unitDefID, enabled)
-	if radarUnitDef[unitDefID] then 
-		Spring.SetUnitSensorRadius(unitID, "radar", (enabled and radarUnitDef[unitDefID]) or 0)
+local function UpdateSensorAndJamm(unitID, unitDefID, enabled, radarOverride, sonarOverride, jammerOverride, sightOverride)
+	if radarUnitDef[unitDefID] or radarOverride then 
+		Spring.SetUnitSensorRadius(unitID, "radar", (enabled and (radarOverride or radarUnitDef[unitDefID])) or 0)
 	end
-	if sonarUnitDef[unitDefID] then 
-		Spring.SetUnitSensorRadius(unitID, "sonar", (enabled and sonarUnitDef[unitDefID]) or 0)
+	if sonarUnitDef[unitDefID] or sonarOverride then 
+		Spring.SetUnitSensorRadius(unitID, "sonar", (enabled and (sonarOverride or sonarUnitDef[unitDefID])) or 0)
 	end
-	if jammerUnitDef[unitDefID] then 
-		Spring.SetUnitSensorRadius(unitID, "radarJammer", (enabled and jammerUnitDef[unitDefID]) or 0)
+	if jammerUnitDef[unitDefID] or jammerOverride then 
+		Spring.SetUnitSensorRadius(unitID, "radarJammer", (enabled and (jammerOverride or jammerUnitDef[unitDefID])) or 0)
+	end
+	if sightOverride then
+		Spring.SetUnitSensorRadius(unitID, "los", sightOverride)
+		Spring.SetUnitSensorRadius(unitID, "airLos", sightOverride)
 	end
 end
 
@@ -129,7 +141,7 @@ local function updateBuildSpeed(unitID, ud, speedFactor)
         state.buildSpeed*speedFactor, -- build
         2*state.buildSpeed*speedFactor, -- repair
         state.buildSpeed*speedFactor, -- reclaim
-        0.8*state.buildSpeed*speedFactor) -- rezz
+        0.4*state.buildSpeed*speedFactor) -- rezz
     
 end
 
@@ -340,6 +352,7 @@ end
 -- UnitRulesParam Handling
 
 local currentEcon = {}
+local currentBuildpower = {}
 local currentReload = {}
 local currentMovement = {}
 local currentTurn = {}
@@ -353,7 +366,8 @@ local function removeUnit(unitID)
 	unitAbilityDisabled[unitID] = nil
 	unitReloadPaused[unitID] = nil
 	
-	currentEcon[unitID] = nil 
+	currentEcon[unitID] = nil
+	currentBuildpower[unitID] = nil
 	currentReload[unitID] = nil 
 	currentMovement[unitID] = nil 
 	currentTurn[unitID] = nil 
@@ -370,11 +384,13 @@ function UpdateUnitAttributes(unitID, frame)
 	if not udid then 
 		return 
 	end
-		
+	
 	frame = frame or spGetGameFrame()
 	
 	local ud = UnitDefs[udid]
 	local changedAtt = false
+	
+	customParamsSpeedFactor = speedFactorUnitDefs[udid] or 1
 	
 	-- Increased reload from CAPTURE --
 	local selfReloadSpeedChange = spGetUnitRulesParam(unitID,"selfReloadSpeedChange")
@@ -384,6 +400,7 @@ function UpdateUnitAttributes(unitID, frame)
 	local crashing = spGetUnitRulesParam(unitID,"crashing") or 0
 	
 	-- Unit speed change (like sprint) --
+	local upgradesSpeedMult   = spGetUnitRulesParam(unitID, "upgradesSpeedMult")
 	local selfMoveSpeedChange = spGetUnitRulesParam(unitID, "selfMoveSpeedChange")
 	local selfTurnSpeedChange = spGetUnitRulesParam(unitID, "selfTurnSpeedChange")
 	local selfIncomeChange = spGetUnitRulesParam(unitID, "selfIncomeChange")
@@ -391,18 +408,23 @@ function UpdateUnitAttributes(unitID, frame)
 	
 	-- SLOW --
 	local slowState = spGetUnitRulesParam(unitID,"slowState")
+	local buildpowerMult = spGetUnitRulesParam(unitID, "buildpower_mult")
 	
-	if selfReloadSpeedChange or selfMoveSpeedChange or slowState or selfTurnSpeedChange or selfIncomeChange or disarmed or morphDisable or selfAccelerationChange then
+	if selfReloadSpeedChange or selfMoveSpeedChange or slowState or buildpowerMult or
+			selfTurnSpeedChange or selfIncomeChange or disarmed or morphDisable or selfAccelerationChange then
 		local slowMult   = 1-(slowState or 0)
 		local econMult   = (slowMult)*(1 - disarmed)*(1 - morphDisable)*(selfIncomeChange or 1)
-		local moveMult   = (slowMult)*(selfMoveSpeedChange or 1)*(1 - morphDisable)
+		local buildMult  = (slowMult)*(1 - disarmed)*(1 - morphDisable)*(selfIncomeChange or 1)*(buildpowerMult or 1)
+		local moveMult   = (slowMult)*(selfMoveSpeedChange or 1)*(1 - morphDisable)*customParamsSpeedFactor*(upgradesSpeedMult or 1)
 		local turnMult   = (slowMult)*(selfMoveSpeedChange or 1)*(selfTurnSpeedChange or 1)*(1 - morphDisable)
 		local reloadMult = (slowMult)*(selfReloadSpeedChange or 1)*(1 - disarmed)*(1 - morphDisable)
-		local maxAccMult = (slowMult)*(selfMaxAccelerationChange or 1)
+		local maxAccMult = (slowMult)*(selfMaxAccelerationChange or 1)*customParamsSpeedFactor*(upgradesSpeedMult or 1)
 
 		-- Let other gadgets and widgets get the total effect without 
 		-- duplicating the pevious calculations.
 		spSetUnitRulesParam(unitID, "totalReloadSpeedChange", reloadMult, INLOS_ACCESS)
+		spSetUnitRulesParam(unitID, "totalEconomyChange", econMult, INLOS_ACCESS)
+		spSetUnitRulesParam(unitID, "totalBuildPowerChange", buildMult, INLOS_ACCESS)
 		spSetUnitRulesParam(unitID, "totalMoveSpeedChange", moveMult, INLOS_ACCESS)
 		
 		unitSlowed[unitID] = moveMult < 1
@@ -418,8 +440,12 @@ function UpdateUnitAttributes(unitID, frame)
 			currentAcc[unitID] = maxAccMult
 		end
 		
+		if buildMult ~= currentBuildpower[unitID] then
+			updateBuildSpeed(unitID, ud, buildMult)
+			currentBuildpower[unitID] = buildMult
+		end
+		
 		if econMult ~= currentEcon[unitID] then
-			updateBuildSpeed(unitID, ud, econMult)
 			updateEconomy(unitID, ud, econMult)
 			currentEcon[unitID] = econMult
 		end
@@ -430,7 +456,7 @@ function UpdateUnitAttributes(unitID, frame)
 		unitSlowed[unitID] = nil
 	end
 	
-	local forcedOff = spGetUnitRulesParam(unitID,"forcedOff")
+	local forcedOff = spGetUnitRulesParam(unitID, "forcedOff")
 	local abilityDisabled = (forcedOff == 1 or disarmed == 1 or morphDisable == 1 or crashing == 1)
 	local setNewState
 	
@@ -440,17 +466,22 @@ function UpdateUnitAttributes(unitID, frame)
 		setNewState = true
 	end
 	
-	if ud.shieldWeaponDef and setNewState then
+	if ud.shieldWeaponDef and spGetUnitRulesParam(unitID, "comm_shield_max") ~= 0 and setNewState then
 		if abilityDisabled then
-			Spring.SetUnitShieldState(unitID, -1, false)
+			Spring.SetUnitShieldState(unitID, spGetUnitRulesParam(unitID, "comm_shield_num") or -1, false)
 		else
-			Spring.SetUnitShieldState(unitID, -1, true)
+			Spring.SetUnitShieldState(unitID, spGetUnitRulesParam(unitID, "comm_shield_num") or -1, true)
 		end
 	end
 	
-	if setNewState then
+	local radarOverride = spGetUnitRulesParam(unitID, "radarRangeOverride")
+	local sonarOverride = spGetUnitRulesParam(unitID, "sonarRangeOverride")
+	local jammerOverride = spGetUnitRulesParam(unitID, "jammingRangeOverride")
+	local sightOverride = spGetUnitRulesParam(unitID, "sightRangeOverride")
+	
+	if setNewState or radarOverride or sonarOverride or jammerOverride or sightOverride then
 		changedAtt = true
-		UpdateSensorAndJamm(unitID, udid, not abilityDisabled)
+		UpdateSensorAndJamm(unitID, udid, not abilityDisabled, radarOverride, sonarOverride, jammerOverride, sightOverride)
 	end
 
 	local cloakBlocked = (spGetUnitRulesParam(unitID,"on_fire") == 1) or (disarmed == 1) or (morphDisable == 1)
@@ -466,6 +497,12 @@ end
 
 function gadget:Initialize()
 	GG.UpdateUnitAttributes = UpdateUnitAttributes
+end
+
+function gadget:UnitCreated(unitID, unitDefID)
+	if speedFactorUnitDefs[unitDefID] then
+		UpdateUnitAttributes(unitID)
+	end
 end
 
 function gadget:GameFrame(f)

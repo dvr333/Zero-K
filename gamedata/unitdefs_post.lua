@@ -283,21 +283,23 @@ end
 --
 --Spring.Echo("Shield Weapon Def")
 for name, ud in pairs(UnitDefs) do
-	local hasShield = false
-	if ud.weapondefs then
-		for _, wd in pairs(ud.weapondefs) do      
-			if wd.weapontype == "Shield" then
-				hasShield = true
-				break
+	if not ud.customparams.dynamic_comm then
+		local hasShield = false
+		if ud.weapondefs then
+			for _, wd in pairs(ud.weapondefs) do      
+				if wd.weapontype == "Shield" then
+					hasShield = true
+					break
+				end
 			end
 		end
-	end
-	if (hasShield or (((not ud.maxvelocity) or ud.maxvelocity == 0) and not ud.cloakcost)) then
-		ud.customparams.cannotcloak = 1
-		ud.mincloakdistance = 0
-		ud.cloakcost = nil
-		ud.cloakcostmoving = nil
-		ud.cancloak = false
+		if (hasShield or (((not ud.maxvelocity) or ud.maxvelocity == 0) and not ud.cloakcost)) then
+			ud.customparams.cannotcloak = 1
+			ud.mincloakdistance = 0
+			ud.cloakcost = nil
+			ud.cloakcostmoving = nil
+			ud.cancloak = false
+		end
 	end
 end
 
@@ -724,6 +726,18 @@ for name, ud in pairs(UnitDefs) do
 	if ud.builddistance and ud.builddistance < 128 and name ~= "armasp" and name ~= "armcarry" then
 		ud.builddistance = 128 
 	end
+end
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Counteract Attributes Speed Multiplier
+--
+for name, ud in pairs(UnitDefs) do
+    if ud.customparams and ud.customparams.att_speedmult then
+		ud.maxvelocity = ud.maxvelocity/ud.customparams.att_speedmult
+		ud.acceleration = ud.acceleration/ud.customparams.att_speedmult
+		ud.brakerate = ud.brakerate/ud.customparams.att_speedmult
+    end   
 end
 
 --------------------------------------------------------------------------------
