@@ -24,7 +24,14 @@ GG.startBoxConfig = startboxConfig
 GG.manualStartposConfig = manualStartposConfig
 
 local function CheckStartbox (boxID, x, z)
+	if not boxID then
+		return true
+	end
+
 	local box = startboxConfig[boxID]
+	if not box then
+		return true
+	end
 
 	for i = 1, #box do
 		local x1, z1, x2, z2, x3, z3 = unpack(box[i])
@@ -40,7 +47,7 @@ local function CheckStartbox (boxID, x, z)
 end
 
 function gadget:Initialize()
-
+	
 	Spring.SetGameRulesParam("startbox_max_n", #startboxConfig)
 	Spring.SetGameRulesParam("startbox_recommended_startpos", manualStartposConfig and 1 or 0)
 
@@ -138,6 +145,11 @@ end
 GG.CheckStartbox = CheckStartbox
 
 function gadget:AllowStartPosition(x, y, z, playerID, readyState)
+	if (x == 0 and z == 0) then
+		-- engine default startpos
+		return false
+	end
+
 	if (playerID == 255) then
 		return true -- custom AI, can't know which team it is on so allow it to place anywhere for now and filter invalid positions later
 	end

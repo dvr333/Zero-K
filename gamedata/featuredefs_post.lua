@@ -13,6 +13,8 @@
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
+Spring.Echo("Loacing FeatureDefs_posts")
+
 local function isbool(x)   return (type(x) == 'boolean') end
 local function istable(x)  return (type(x) == 'table')   end
 local function isnumber(x) return (type(x) == 'number')  end
@@ -32,7 +34,7 @@ local baseModuleWreck = {
 	height			= [[4]],
 	hitdensity		= [[100]],
 	metal			= 40,
-	object			= [[wreck2x2c.s3o]],
+	object			= [[wreck1x1.s3o]],
 	reclaimable		= true,
 	reclaimTime		= 40,
 }

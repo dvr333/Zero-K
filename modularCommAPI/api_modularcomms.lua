@@ -11,7 +11,7 @@ local function GetInfo()
 		layer     = 0,
 		api       = true,
 		enabled   = true,
-		--alwaysStart = true,
+		alwaysStart = true,
 	}
 end
 
@@ -58,6 +58,9 @@ local function LoadCommData()
 		newCommData = {}
 	else
 		commDataRaw = string.gsub(commDataRaw, '_', '=')
+		if collectgarbage then
+			collectgarbage("collect")
+		end
 		commDataRaw = Spring.Utilities.Base64Decode(commDataRaw)
 		--Spring.Echo(commDataRaw)
 		commDataFunc, err = loadstring("return "..commDataRaw)
@@ -73,7 +76,7 @@ local function LoadCommData()
 		Spring.Log(GetInfo().name, "warning", 'Modular Comms API warning: ' .. err)
 	end
 	
-	newCommProfilesByProfileID = legacyTranslators.TranslateModoption(newCommProfilesByProfileID)
+	--newCommProfilesByProfileID = legacyTranslators.TranslateModoption(newCommProfilesByProfileID)
 	
 	-- comm player entries
 	local commProfilesForPlayers = {}	-- {[playerID1] = {}, [playerID2] = {}}
@@ -98,7 +101,7 @@ local function LoadCommData()
 						err = playerCommProfileIDs
 						playerCommProfileIDs = {}
 					else
-						playerCommProfileIDs = legacyTranslators.TranslatePlayerCustomkeys(playerCommProfileIDs)
+						--playerCommProfileIDs = legacyTranslators.TranslatePlayerCustomkeys(playerCommProfileIDs)
 					end
 				end
 			end

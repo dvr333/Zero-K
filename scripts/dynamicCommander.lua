@@ -40,10 +40,10 @@ local function CalculatePaceMult()
 	local levelToPace = {
 		[0] = 1,
 		[1] = 1,
-		[2] = 0.93,
-		[3] = 0.86,
-		[4] = 0.8,
-		[5] = 0.75,
+		[2] = 0.94,
+		[3] = 0.88,
+		[4] = 0.85,
+		[5] = 0.8,
 	}
 	
 	paceMult = levelToPace[Spring.GetUnitRulesParam(unitID, "comm_level") or 0] or levelToPace[5]
@@ -257,7 +257,7 @@ local function SpawnModuleWrecks(wreckLevel)
 	local vx, vy, vz = Spring.GetUnitVelocity(unitID)
 	local teamID	= Spring.GetUnitTeam(unitID)
 	
-	local moduleCount = Spring.GetUnitRulesParam(unitID, "comm_module_count")
+	local moduleCount = Spring.GetUnitRulesParam(unitID, "comm_module_count") or 0;
 	for i = 1, moduleCount do
 		SpawnModuleWreck(Spring.GetUnitRulesParam(unitID, "comm_module_" .. i), wreckLevel, moduleCount, teamID, x, y, z, vx, vy, vz)
 	end

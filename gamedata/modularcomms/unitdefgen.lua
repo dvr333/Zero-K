@@ -64,7 +64,7 @@ else
 			err = commData
 			commData = {}
 		else
-			commData = legacyTranslators.TranslateModoption(commData)
+			--commData = legacyTranslators.TranslateModoption(commData)
 		end
 	end
 end
@@ -273,6 +273,10 @@ local function ProcessComm(name, config)
 		commDefs[name].buildtime = commDefs[name].buildtime + config.cost
 		cp.cost = config.cost
 		
+		if config.power then
+			commDefs[name].power = config.power
+		end
+		
 		-- morph
 		if config.morphto then
 			cp.morphto = config.morphto
@@ -354,6 +358,7 @@ for name, data in pairs(commDefs) do
 	-- apply intrinsic bonuses
 	local damBonus = data.customparams.damagebonus or 0
 	ModifyWeaponDamage(data, damBonus, true)
+	
 	local rangeBonus =  data.customparams.rangebonus or 0
 	ModifyWeaponRange(data, rangeBonus, true)
 
@@ -429,7 +434,7 @@ for name, data in pairs(commDefs) do
 	
 	-- rez speed
 	if data.canresurrect then 
-		data.resurrectspeed = data.workertime*0.4
+		data.resurrectspeed = data.workertime*0.5
 	end
 	
 	-- make sure weapons can hit their max range

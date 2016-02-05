@@ -59,6 +59,7 @@ local moduleDefs = {
 		image = "unitpics/commweapon_beamlaser.png",
 		limit = 1,
 		cost = 25 * COST_MULT,
+		requireChassis = {"recon", "assault", "support", "strike"},
 		requireLevel = 1,
 		slotType = "basic_weapon",
 		applicationFunction = function (modules, sharedData)
@@ -121,14 +122,14 @@ local moduleDefs = {
 		image = "unitpics/commweapon_heavymachinegun.png",
 		limit = 1,
 		cost = 75 * COST_MULT,
-		requireChassis = {"recon", "assault"},
+		requireChassis = {"recon", "assault", "strike"},
 		requireLevel = 1,
 		slotType = "basic_weapon",
 		applicationFunction = function (modules, sharedData)
 			if sharedData.noMoreWeapons then
 				return
 			end
-			local weaponName = (modules[moduleDefNames.disruptor_ammo] and "commweapon_heavymachinegun_disrupt") or "commweapon_heavymachinegun"
+			local weaponName = (modules[moduleDefNames.conversion_disruptor] and "commweapon_heavymachinegun_disrupt") or "commweapon_heavymachinegun"
 			if not sharedData.weapon1 then
 				sharedData.weapon1 = weaponName
 			else
@@ -150,7 +151,7 @@ local moduleDefs = {
 			if sharedData.noMoreWeapons then
 				return
 			end
-			local weaponName = (modules[moduleDefNames.napalm_warhead] and "commweapon_hpartillery_napalm") or "commweapon_hpartillery"
+			local weaponName = (modules[moduleDefNames.weaponmod_napalm_warhead] and "commweapon_hpartillery_napalm") or "commweapon_hpartillery"
 			if not sharedData.weapon1 then
 				sharedData.weapon1 = weaponName
 			else
@@ -165,14 +166,14 @@ local moduleDefs = {
 		image = "unitpics/commweapon_lightninggun.png",
 		limit = 1,
 		cost = 75 * COST_MULT,
-		requireChassis = {"recon", "support"},
+		requireChassis = {"recon", "support", "strike"},
 		requireLevel = 1,
 		slotType = "basic_weapon",
 		applicationFunction = function (modules, sharedData)
 			if sharedData.noMoreWeapons then
 				return
 			end
-			local weaponName = (modules[moduleDefNames.flux_amplifier] and "commweapon_lightninggun_improved") or "commweapon_lightninggun"
+			local weaponName = (modules[moduleDefNames.weaponmod_stun_booster] and "commweapon_lightninggun_improved") or "commweapon_lightninggun"
 			if not sharedData.weapon1 then
 				sharedData.weapon1 = weaponName
 			else
@@ -187,14 +188,14 @@ local moduleDefs = {
 		image = "unitpics/commweapon_lparticlebeam.png",
 		limit = 1,
 		cost = 50 * COST_MULT,
-		requireChassis = {"support", "recon"},
+		requireChassis = {"support", "recon", "strike"},
 		requireLevel = 1,
 		slotType = "basic_weapon",
 		applicationFunction = function (modules, sharedData)
 			if sharedData.noMoreWeapons then
 				return
 			end
-			local weaponName = (modules[moduleDefNames.disruptor_ammo] and "commweapon_disruptor") or "commweapon_lparticlebeam"
+			local weaponName = (modules[moduleDefNames.conversion_disruptor] and "commweapon_disruptor") or "commweapon_lparticlebeam"
 			if not sharedData.weapon1 then
 				sharedData.weapon1 = weaponName
 			else
@@ -209,7 +210,7 @@ local moduleDefs = {
 		image = "unitpics/commweapon_missilelauncher.png",
 		limit = 1,
 		cost = 75 * COST_MULT,
-		requireChassis = {"support"},
+		requireChassis = {"support", "strike"},
 		requireLevel = 1,
 		slotType = "basic_weapon",
 		applicationFunction = function (modules, sharedData)
@@ -237,7 +238,7 @@ local moduleDefs = {
 			if sharedData.noMoreWeapons then
 				return
 			end
-			local weaponName = (modules[moduleDefNames.napalm_warhead] and "commweapon_riotcannon_napalm") or "commweapon_riotcannon"
+			local weaponName = (modules[moduleDefNames.weaponmod_napalm_warhead] and "commweapon_riotcannon_napalm") or "commweapon_riotcannon"
 			if not sharedData.weapon1 then
 				sharedData.weapon1 = weaponName
 			else
@@ -259,7 +260,7 @@ local moduleDefs = {
 			if sharedData.noMoreWeapons then
 				return
 			end
-			local weaponName = (modules[moduleDefNames.napalm_warhead] and "commweapon_rocketlauncher_napalm") or "commweapon_rocketlauncher"
+			local weaponName = (modules[moduleDefNames.weaponmod_napalm_warhead] and "commweapon_rocketlauncher_napalm") or "commweapon_rocketlauncher"
 			if not sharedData.weapon1 then
 				sharedData.weapon1 = weaponName
 			else
@@ -274,14 +275,14 @@ local moduleDefs = {
 		image = "unitpics/commweapon_shotgun.png",
 		limit = 1,
 		cost = 75 * COST_MULT,
-		requireChassis = {"recon", "support"},
+		requireChassis = {"recon", "support", "strike"},
 		requireLevel = 1,
 		slotType = "basic_weapon",
 		applicationFunction = function (modules, sharedData)
 			if sharedData.noMoreWeapons then
 				return
 			end
-			local weaponName = (modules[moduleDefNames.disruptor_ammo] and "commweapon_shotgun_disrupt") or "commweapon_shotgun"
+			local weaponName = (modules[moduleDefNames.conversion_disruptor] and "commweapon_shotgun_disrupt") or "commweapon_shotgun"
 			if not sharedData.weapon1 then
 				sharedData.weapon1 = weaponName
 			else
@@ -303,7 +304,7 @@ local moduleDefs = {
 			if sharedData.noMoreWeapons then
 				return
 			end
-			local weaponName = (modules[moduleDefNames.disruptor_ammo] and "commweapon_heavy_disruptor") or "commweapon_hparticlebeam"
+			local weaponName = (modules[moduleDefNames.conversion_disruptor] and "commweapon_heavy_disruptor") or "commweapon_hparticlebeam"
 			sharedData.weapon1 = weaponName
 			sharedData.weapon2 = nil
 			sharedData.noMoreWeapons = true
@@ -377,7 +378,7 @@ local moduleDefs = {
 		image = "unitpics/commweapon_disintegrator.png",
 		limit = 1,
 		cost = 400 * COST_MULT,
-		requireChassis = {"assault"},
+		requireChassis = {"assault", "strike"},
 		requireLevel = 3,
 		slotType = "adv_weapon",
 		applicationFunction = function (modules, sharedData)
@@ -398,7 +399,7 @@ local moduleDefs = {
 		image = "unitpics/commweapon_disruptorbomb.png",
 		limit = 1,
 		cost = 125 * COST_MULT,
-		requireChassis = {"recon", "support"},
+		requireChassis = {"recon", "support", "strike"},
 		requireLevel = 3,
 		slotType = "adv_weapon",
 		applicationFunction = function (modules, sharedData)
@@ -419,14 +420,14 @@ local moduleDefs = {
 		image = "unitpics/commweapon_multistunner.png",
 		limit = 1,
 		cost = 125 * COST_MULT,
-		requireChassis = {"support", "recon"},
+		requireChassis = {"support", "recon", "strike"},
 		requireLevel = 3,
 		slotType = "adv_weapon",
 		applicationFunction = function (modules, sharedData)
 			if sharedData.noMoreWeapons then
 				return
 			end
-			local weaponName = (modules[moduleDefNames.flux_amplifier] and "commweapon_multistunner_improved") or "commweapon_multistunner"
+			local weaponName = (modules[moduleDefNames.weaponmod_stun_booster] and "commweapon_multistunner_improved") or "commweapon_multistunner"
 			if not sharedData.weapon1 then
 				sharedData.weapon1 = weaponName
 			else
@@ -436,8 +437,8 @@ local moduleDefs = {
 	},
 	{
 		name = "commweapon_napalmgrenade",
-		humanName = "Helfire Grenade",
-		description = "Helfire Grenade",
+		humanName = "Hellfire Grenade",
+		description = "Hellfire Grenade",
 		image = "unitpics/commweapon_napalmgrenade.png",
 		limit = 1,
 		cost = 100 * COST_MULT,
@@ -500,7 +501,7 @@ local moduleDefs = {
 		image = "unitpics/module_personal_shield.png",
 		limit = 1,
 		cost = 300 * COST_MULT,
-		prohibitingModules = {"personalcloak"},
+		prohibitingModules = {"module_personal_cloak"},
 		requireLevel = 2,
 		slotType = "module",
 		applicationFunction = function (modules, sharedData)
@@ -516,7 +517,7 @@ local moduleDefs = {
 		cost = 250 * COST_MULT,
 		requireChassis = {"assault", "support"},
 		requireOneOf = {"commweapon_personal_shield"},
-		prohibitingModules = {"personalcloak"},
+		prohibitingModules = {"module_personal_cloak"},
 		requireLevel = 3,
 		slotType = "module",
 		applicationFunction = function (modules, sharedData)
@@ -542,6 +543,7 @@ local moduleDefs = {
 		image = "unitpics/weaponmod_disruptor_ammo.png",
 		limit = 1,
 		cost = 450 * COST_MULT,
+		requireChassis = {"strike", "recon", "support"},
 		requireOneOf = {"commweapon_heavymachinegun", "commweapon_shotgun", "commweapon_hparticlebeam", "commweapon_lparticlebeam"},
 		requireLevel = 2,
 		slotType = "module",
@@ -553,7 +555,7 @@ local moduleDefs = {
 		image = "unitpics/weaponmod_stun_booster.png",
 		limit = 1,
 		cost = 300 * COST_MULT,
-		requireChassis = {"support"},
+		requireChassis = {"support", "strike"},
 		requireOneOf = {"commweapon_lightninggun", "commweapon_multistunner"},
 		requireLevel = 2,
 		slotType = "module",
@@ -593,7 +595,7 @@ local moduleDefs = {
 		image = "unitpics/module_personal_cloak.png",
 		limit = 1,
 		cost = 400 * COST_MULT,
-		prohibitingModules = {"commweapon_personal_shield", "commweapon_area)shield"},
+		prohibitingModules = {"commweapon_personal_shield", "commweapon_areashield"},
 		requireLevel = 2,
 		slotType = "module",
 		applicationFunction = function (modules, sharedData)
@@ -608,7 +610,8 @@ local moduleDefs = {
 		image = "unitpics/module_cloak_field.png",
 		limit = 1,
 		cost = 600 * COST_MULT,
-		requireOneOf = {"radarjammer"},
+		requireChassis = {"support", "strike"},
+		requireOneOf = {"module_jammer"},
 		requireLevel = 3,
 		slotType = "module",
 		applicationFunction = function (modules, sharedData)
@@ -622,7 +625,7 @@ local moduleDefs = {
 	{
 		name = "module_resurrect",
 		humanName = "Lazarus Device",
-		description = "Lazarus Device - Upgrade nanolathe to allow resurrection. Halves build power.",
+		description = "Lazarus Device - Upgrade nanolathe to allow resurrection.",
 		image = "unitpics/module_resurrect.png",
 		limit = 1,
 		cost = 400 * COST_MULT,
@@ -642,7 +645,6 @@ local moduleDefs = {
 		image = "unitpics/module_companion_drone.png",
 		limit = 8,
 		cost = 400 * COST_MULT,
-		requireChassis = {"recon", "support", "assault"},
 		requireLevel = 2,
 		slotType = "module",
 		applicationFunction = function (modules, sharedData)
@@ -657,7 +659,7 @@ local moduleDefs = {
 		limit = 8,
 		cost = 600 * COST_MULT,
 		requireChassis = {"support"},
-		requireOneOf = {"drone"},
+		requireOneOf = {"module_companion_drone"},
 		requireLevel = 3,
 		slotType = "module",
 		applicationFunction = function (modules, sharedData)
@@ -698,7 +700,7 @@ local moduleDefs = {
 		image = "unitpics/module_heavy_armor.png",
 		limit = 8,
 		cost = 400 * COST_MULT,
-		requireOneOf = {"health"},
+		requireOneOf = {"module_ablative_armor"},
 		requireLevel = 2,
 		slotType = "module",
 		applicationFunction = function (modules, sharedData)
@@ -735,15 +737,15 @@ local moduleDefs = {
 	},
 	{
 		name = "module_adv_targeting",
-		humanName = "Advanced Targeting System",
-		description = "Advanced Targeting System - Increases range by 5%, increased weapon weight reduces speed by 2.5%. Limit: 8",
+		humanName = "Adv. Targeting System",
+		description = "Advanced Targeting System - Increases range by 7.5%, increased weapon weight reduces speed by 2.5%. Limit: 8",
 		image = "unitpics/module_adv_targeting.png",
 		limit = 8,
-		cost = 100 * COST_MULT,
+		cost = 150 * COST_MULT,
 		requireLevel = 1,
 		slotType = "module",
 		applicationFunction = function (modules, sharedData)
-			sharedData.rangeMult = (sharedData.rangeMult or 1) + 0.05
+			sharedData.rangeMult = (sharedData.rangeMult or 1) + 0.075
 			sharedData.speedMult = (sharedData.speedMult or 1) - 0.025
 		end
 	},
@@ -887,7 +889,7 @@ local chassisDefs = {
 				morphBuildPower = 15,
 				morphBaseCost = 150 * COST_MULT,
 				chassisApplicationFunction = function (modules, sharedData)
-					sharedData.autorepairRate = (sharedData.autorepairRate or 0) + 5
+					sharedData.autorepairRate = (sharedData.autorepairRate or 0) + 12.5
 				end,
 				morphUnitDefFunction = function(modulesByDefID)
 					return UnitDefNames["dynstrike2_" .. GetStrikeCloneModulesString(modulesByDefID)].id
@@ -907,7 +909,7 @@ local chassisDefs = {
 				morphBuildPower = 20,
 				morphBaseCost = 500 * COST_MULT,
 				chassisApplicationFunction = function (modules, sharedData)
-					sharedData.autorepairRate = (sharedData.autorepairRate or 0) + 5
+					sharedData.autorepairRate = (sharedData.autorepairRate or 0) + 20
 				end,
 				morphUnitDefFunction = function(modulesByDefID)
 					return UnitDefNames["dynstrike3_" .. GetStrikeCloneModulesString(modulesByDefID)].id
@@ -915,7 +917,7 @@ local chassisDefs = {
 				upgradeSlots = {
 					{
 						defaultModule = moduleDefNames.commweapon_beamlaser,
-						slotAllows = "adv_weapon",
+						slotAllows = {"adv_weapon", "basic_weapon"},
 					},
 					{
 						defaultModule = moduleDefNames.nullmodule,
@@ -931,7 +933,7 @@ local chassisDefs = {
 				morphBuildPower = 25,
 				morphBaseCost = 300 * COST_MULT,
 				chassisApplicationFunction = function (modules, sharedData)
-					sharedData.autorepairRate = (sharedData.autorepairRate or 0) + 5
+					sharedData.autorepairRate = (sharedData.autorepairRate or 0) + 27.5
 				end,
 				morphUnitDefFunction = function(modulesByDefID)
 					return UnitDefNames["dynstrike4_" .. GetStrikeCloneModulesString(modulesByDefID)].id
@@ -955,7 +957,7 @@ local chassisDefs = {
 				morphBuildPower = 30,
 				morphBaseCost = 400 * COST_MULT,
 				chassisApplicationFunction = function (modules, sharedData)
-					sharedData.autorepairRate = (sharedData.autorepairRate or 0) + 5
+					sharedData.autorepairRate = (sharedData.autorepairRate or 0) + 35
 				end,
 				morphUnitDefFunction = function(modulesByDefID)
 					return UnitDefNames["dynstrike5_" .. GetStrikeCloneModulesString(modulesByDefID)].id

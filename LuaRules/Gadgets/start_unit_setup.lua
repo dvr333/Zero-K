@@ -68,8 +68,6 @@ local coop = Spring.Utilities.tobool(Spring.GetModOption("coop", false, false))
 local dotaMode = Spring.GetModOptions().zkmode == "dota"
 local ctfMode = Spring.GetModOptions().zkmode == "ctf"
 local playerChickens = Spring.Utilities.tobool(Spring.GetModOption("playerchickens", false, false))
-local startboxString = Spring.GetModOptions().startboxes
-local startboxConfig = startboxString and (loadstring(startboxString)()) or {}
 --Spring.Echo(coop == 1, coop == 0)
 
 local gaiateam = Spring.GetGaiaTeamID()
@@ -175,14 +173,14 @@ end
 local function GetStartUnit(teamID, playerID, isAI)
 
 	if Spring.GetModOption("forcejunior", true, false) then
-		return "commbasic"
+		return UnitDefNames["commbasic"].id
 	end
 
 	local startUnit
 	local commProfileID = nil
 
 	if isAI then -- AI that didn't pick comm type gets default comm
-		return Spring.GetTeamRulesParam(teamID, "start_unit") or "dyntrainer_assault"
+		return UnitDefNames[Spring.GetTeamRulesParam(teamID, "start_unit") or "dyntrainer_assault_base"].id
 	end
 
 	if (teamID and teamSides[teamID]) then 
@@ -256,35 +254,30 @@ local function GetFacingDirection(x, z, teamID)
 end
 
 local function getMiddleOfStartBox(teamID)
+	local x, z
 	if GG.manualStartposConfig then
 		local boxID = Spring.GetTeamRulesParam(teamID, "start_box_id")
-		local startpos = GG.manualStartposConfig[boxID][1]
-
-		local x = startpos[1]
-		local z = startpos[2]
-		local y = Spring.GetGroundHeight(x,z)
-
-		return x, y, z
-	end
-
-	if not startboxString then -- legacy boxes
-		local allyTeam = select(6, spGetTeamInfo(teamID))
-		local x1, z1, x2, z2 = Spring.GetAllyTeamStartBox(allyTeam)
-
-		local x = x1 + (x2 - x1)*0.5
-		local z = z1 + (z2 - z1)*0.5
-		local y = Spring.GetGroundHeight(x,z)
-
-		return x, y, z
+		if not boxID then
+			x = Game.mapSizeX / 2
+			z = Game.mapSizeZ / 2
+		else
+			local startposList = GG.manualStartposConfig[boxID]
+			if not startposList then
+				x = Game.mapSizeX / 2
+				z = Game.mapSizeZ / 2
+			else
+				local startpos = startposList[1] -- todo: distribute afkers over them all instead of always using the 1st
+				x = startpos[1]
+				z = startpos[2]
+			end
+		end
 	else
-		local boxID = Spring.GetTeamRulesParam(teamID, "start_box_id")
-		local box = boxID and startboxConfig[boxID] or {0,0,1,1}
-		local x = (box[1]+box[3])/2 * Game.mapSizeX
-		local z = (box[2]+box[4])/2 * Game.mapSizeZ
-		local y = Spring.GetGroundHeight(x,z)
-
-		return x, y, z
+		-- shouldnt ever arrive there
+		x = Game.mapSizeX / 2
+		z = Game.mapSizeZ / 2
 	end
+
+	return x, Spring.GetGroundHeight(x,z), z
 end
 
 local function SpawnStartUnit(teamID, playerID, isAI, bonusSpawn, notAtTheStartOfTheGame)
@@ -319,7 +312,7 @@ local function SpawnStartUnit(teamID, playerID, isAI, bonusSpawn, notAtTheStartO
 	local x,y,z
 	local startPosition = luaSetStartPositions[teamID]
 	if not startPosition then
-		if (GG.startBoxConfig and not (Spring.GetTeamRulesParam(teamID, "valid_startpos") or isAI)) or (not GG.startBoxConfig and notAtTheStartOfTheGame and (Game.startPosType == 2)) then
+		if not (Spring.GetTeamRulesParam(teamID, "valid_startpos") or isAI) then
 			x,y,z = getMiddleOfStartBox(teamID)
 		else
 			x,y,z = Spring.GetTeamStartPosition(teamID)
@@ -392,10 +385,13 @@ end
 
 local function StartUnitPicked(playerID, name)
 	local _,_,spec,teamID = spGetPlayerInfo(playerID)
-	if spec then return end
+	if spec then 
+		return 
+	end
 	teamSides[teamID] = name
 	local startUnit = GetStartUnit(teamID, playerID)
 	if startUnit then
+		SendToUnsynced("CommSelection",playerID, startUnit) --activate an event called "CommSelection" that can be detected in unsynced part
 		if UnitDefNames[startUnit] then
 			Spring.SetTeamRulesParam(teamID, "commChoice", UnitDefNames[startUnit].id)
 		else
@@ -555,7 +551,6 @@ function gadget:RecvLuaMsg(msg, playerID)
 		StartUnitPicked(playerID, side)
 	elseif msg:find("customcomm:",1,true) then
 		local name = msg:sub(12)
-		SendToUnsynced("CommSelected",playerID, name) --activate an event called "CommSelected" that can be detected in unsynced part
 		commChoice[playerID] = name
 		StartUnitPicked(playerID, name)
 	elseif msg:find("ai_commander:",1,true) then
@@ -572,7 +567,7 @@ function gadget:RecvLuaMsg(msg, playerID)
 			if (aihost == playerID) then -- it's actually controlled by the local host
 				local unitDef = UnitDefNames[name];
 				if unitDef then -- the requested unit actually exists
-					if aiCommanders[unitDef] then
+					if aiCommanders[unitDef.id] then
 						Spring.SetTeamRulesParam(teamID, "start_unit", name);
 					end
 				end
@@ -651,17 +646,17 @@ local spGetUnitTeam 	= Spring.GetUnitTeam
 
 
 function gadget:Initialize()
-  gadgetHandler:AddSyncAction('CommSelected',CommSelection) --Associate "CommSelected" event to "WrapToLuaUI". Reference: http://springrts.com/phpbb/viewtopic.php?f=23&t=24781 "Gadget and Widget Cross Communication"
+  gadgetHandler:AddSyncAction('CommSelection',CommSelection) --Associate "CommSelected" event to "WrapToLuaUI". Reference: http://springrts.com/phpbb/viewtopic.php?f=23&t=24781 "Gadget and Widget Cross Communication"
 
 end
   
-function CommSelection(_,playerID,commSeries)
+function CommSelection(_,playerID, startUnit)
 	if (Script.LuaUI('CommSelection')) then --if there is widgets subscribing to "CommSelection" function then:
 		local isSpec = Spring.GetSpectatingState() --receiver player is spectator?
 		local myAllyID = Spring.GetMyAllyTeamID() --receiver player's alliance?
 		local _,_,_,_, eventAllyID,_,_,_,_ = Spring.GetPlayerInfo(playerID) --source alliance?
 		if isSpec or myAllyID == eventAllyID then
-			Script.LuaUI.CommSelection(playerID, commSeries) --send to widgets as event
+			Script.LuaUI.CommSelection(playerID, startUnit) --send to widgets as event
 		end
 	end
 end

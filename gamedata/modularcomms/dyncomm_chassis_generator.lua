@@ -5,18 +5,18 @@ local chassisDefs = {
 			"commweapon_peashooter",
 			"commweapon_beamlaser",
 			"commweapon_lparticlebeam",
-			"commweapon_disruptor",
 			"commweapon_shotgun",
 			"commweapon_shotgun_disrupt",
-			"commweapon_lightninggun",
-			"commweapon_flamethrower",
+			"commweapon_disruptor",
 			"commweapon_heavymachinegun",
 			"commweapon_heavymachinegun_disrupt",
+			"commweapon_missilelauncher",
+			"commweapon_lightninggun",
+			"commweapon_lightninggun_improved",
 			"commweapon_multistunner",
-			"commweapon_napalmgrenade",
-			"commweapon_clusterbomb",
+			"commweapon_multistunner_improved",
 			"commweapon_disruptorbomb",
-			"commweapon_concussion",
+			"commweapon_disintegrator",
 			-- Space for shield
 		}
 	},
@@ -101,6 +101,7 @@ local statOverrides = {
 	buildcostmetal  = commanderCost,
 	buildcostenergy = commanderCost,
 	buildtime       = commanderCost,
+	power           = 1200,
 }
 
 for i = 1, #chassisDefs do

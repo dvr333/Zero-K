@@ -3,12 +3,15 @@ local legacyToDyncommChassisMap = {
 	corcom = "assault",
 	commrecon = "recon",
 	commsupport = "support",
+	commstrike = "strike",
 	benzcom = "assault",
 	cremcom = "support",
 	support = "support",
 	recon = "recon",
 	assault = "assault",
 	strike = "strike",
+	guardian = "assault",
+	engineer = "support",
 }
 
 local function TranslateModoption(legacy)
@@ -30,7 +33,7 @@ local function TranslateModoption(legacy)
 					decorations = decorations or {}
 					decorations[#decorations +1] = decData
 				elseif decName == "icon_overhead" then
-					images = {decData.image}
+					images = {overhead = decData.image}
 					decorations = decorations or {}
 					decorations[#decorations +1] = "banner_overhead"
 				end
