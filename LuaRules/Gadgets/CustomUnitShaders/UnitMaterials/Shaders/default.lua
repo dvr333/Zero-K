@@ -125,14 +125,16 @@ return {
     #else
        vec3 normal = normalize(normalv);
     #endif
-       float a    = max( dot(normal, sunPos), 0.0);
+       //float a = max( dot(normal, sunPos), 0.0);
+       //float a = max( dot(normal, sunPos), 0.0) > 0.22 ? 0.7 : 0.0;
+       float a    = sqrt(max( dot(normal, sunPos) - 0.22, 0.0)) * 1.132;
        vec3 light = a * sunDiffuse + sunAmbient;
 
        vec4 extraColor  = texture2D(textureS3o2, gl_TexCoord[0].st);
 
        vec3 reflectDir = reflect(cameraDir, normal);
-       vec3 specular   = textureCube(specularTex, reflectDir).rgb * extraColor.g * 4.0;
-       vec3 reflection = textureCube(reflectTex,  reflectDir).rgb;
+       vec3 specular   = pow(textureCube(specularTex, reflectDir).rgb, vec3(1.5)) * extraColor.g * 5.0;
+       vec3 reflection = textureCube(reflectTex,  reflectDir).rgb * 0.65;
 
     #ifdef use_shadows
        vec4 shadowTC = shadowpos;
@@ -328,7 +330,7 @@ return {
        specular *= shadow;
     #endif
 
-       reflection  = mix(light, reflection, extraColor.g * 0); // reflection
+       reflection  = mix(light, reflection, extraColor.g); // reflection
        reflection += extraColor.rrr; // self-illum
 
        gl_FragColor     = texture2D(textureS3o1, gl_TexCoord[0].st);
