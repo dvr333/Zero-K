@@ -55,7 +55,7 @@ void main(void)
 	vec3 reflectDir = reflect(cameraDir, normal);
 	//vec3 specularColor = textureCube(specularTex, reflectDir).rgb;
 	vec3 specularColor = pow(textureCube(specularTex, reflectDir).rgb, vec3(1.5));
-	float specularLum = dot(specularColor, vec3(0.212, 0.711, 0.07));
+	//float specularLum = dot(specularColor, vec3(0.212, 0.711, 0.07));
 	//vec3 specular   = (specularLum > 0.5 ? specularColor/vec3(max(specularLum, 0.0001)) : vec3(0.0)) * extraColor.g * 4.0;
 	vec3 specular   = specularColor * extraColor.g * 5.0;
 	//vec3 specular   = specularColor * extraColor.g * 4.0;

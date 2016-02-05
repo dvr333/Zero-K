@@ -122,8 +122,10 @@ return {
     #else
        vec3 normal = normalize(normalv);
     #endif
-       float a    = sqrt(max( dot(normal, sunPos) - 0.22, 0.0));
-       vec3 light = a * 1.132 * sunDiffuse + sunAmbient;
+       //float a = max( dot(normal, sunPos), 0.0);
+       //float a = max( dot(normal, sunPos), 0.0) > 0.22 ? 0.7 : 0.0;
+       float a    = sqrt(max( dot(normal, sunPos) - 0.22, 0.0)) * 1.132;
+       vec3 light = a * sunDiffuse + sunAmbient;
 
        vec4 extraColor  = texture2D(textureS3o2, gl_TexCoord[0].st);
 
@@ -142,7 +144,7 @@ return {
        specular *= shadow;
     #endif
 
-       reflection  = mix(light, reflection, extraColor.g); // reflection
+       reflection  = mix(light, reflection, extraColor.g * 0); // reflection
        reflection += extraColor.rrr; // self-illum
 
        gl_FragColor     = texture2D(textureS3o1, gl_TexCoord[0].st);
