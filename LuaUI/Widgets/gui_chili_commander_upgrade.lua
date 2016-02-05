@@ -181,6 +181,8 @@ local function CreateModuleSelectionWindow()
 		padding = {0, 0, 0, 0},	
 		resizable = false,
 		draggable = false,
+		dockableSavePositionOnly = true,
+		dockableNoResize = true,
 		tweakDraggable = true,
 		tweakResizable = true,
 		color = {0,0,0,0},
@@ -572,8 +574,10 @@ local function HideMainWindow()
 end
 
 local function CreateMainWindow()
-	local screenWidth,screenHeight = Spring.GetWindowGeometry()
+	local screenWidth, screenHeight = Spring.GetWindowGeometry()
 	local minimapHeight = screenWidth/6 + 45
+	
+	local mainHeight = math.min(420, math.max(325, screenHeight - 450))
 	
 	mainWindow = Window:New{
 		name = "ModulesWindow",
@@ -581,12 +585,13 @@ local function CreateMainWindow()
 		x = 0,  
 		y = minimapHeight, 
 		clientWidth = 200,
-		clientHeight = 400,
-		minWidth = 100,
-		minHeight = 350,	
+		clientHeight = 325,
+		minWidth = 200,
+		minHeight = 325,	
 		padding = {0, 0, 0, 0},	
 		resizable = false,
 		draggable = false,
+		dockableSavePositionOnly = true,
 		tweakDraggable = true,
 		tweakResizable = true,
 		parent = screen0,
@@ -708,6 +713,7 @@ local function CreateMainWindow()
 		tooltip = "Cancel module selection",
 		OnClick = {
 			function()
+				Spring.Echo("Upgrade UI Debug - Cancel Clicked")
 				HideMainWindow()
 			end
 		},
@@ -876,6 +882,7 @@ function SendUpgradeCommand(newModules)
 	end
 	
 	-- Remove main window
+	Spring.Echo("Upgrade UI Debug - Upgrade Command Sent")
 	HideMainWindow()
 end
 
@@ -963,6 +970,7 @@ end
 function widget:CommandsChanged()
 	local units = Spring.GetSelectedUnits()
 	if mainWindowShown then
+		Spring.Echo("Upgrade UI Debug - Number of units selected", #units)
 		local foundMatchingComm = false
 		for i = 1, #units do
 			local unitID = units[i]
@@ -995,9 +1003,10 @@ function widget:CommandsChanged()
 				cursor  = 'Repair',
 				action  = 'upgradecomm',
 				params  = {}, 
-				texture = 'LuaUI/Images/commands/Bold/build.png',
+				texture = 'LuaUI/Images/commands/Bold/upgrade.png',
 			}
 		else
+			Spring.Echo("Upgrade UI Debug - Commander Deselected")
 			HideMainWindow() -- Hide window if no commander matching the window is selected
 		end
 	end
@@ -1026,7 +1035,7 @@ function widget:CommandsChanged()
 				cursor  = 'Repair',
 				action  = 'upgradecomm',
 				params  = {}, 
-				texture = 'LuaUI/Images/commands/Bold/build.png',
+				texture = 'LuaUI/Images/commands/Bold/upgrade.png',
 			}
 		end
 	end

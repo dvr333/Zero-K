@@ -1285,19 +1285,26 @@ end
 --tooltip functions
 
 local UnitDefByHumanName_cache = {}
-local function GetUnitDefByHumanName(humanName)
-	local cached_udef = UnitDefByHumanName_cache[humanName]
+local UnitDefByHumanNameCommander_cache = {}
+local function GetUnitDefByHumanName(humanName, findCommander)
+	local cache
+	if findCommander then
+		cache = UnitDefByHumanNameCommander_cache
+	else
+		cache = UnitDefByHumanName_cache
+	end
+	local cached_udef = cache[humanName]
 	if (cached_udef ~= nil) then
 		return cached_udef
 	end
-
+	
 	for _,ud in pairs(UnitDefs) do
-		if ud.humanName == humanName then
-			UnitDefByHumanName_cache[humanName] = ud
+		if ud.humanName == humanName and (((ud.customParams and ud.customParams.dynamic_comm and (not ud.customParams.not_starter) and true) or false) == findCommander) then
+			cache[humanName] = ud
 			return ud
 		end
 	end
-	UnitDefByHumanName_cache[humanName] = false
+	cache[humanName] = false
 	return false
 end
 
@@ -1332,7 +1339,7 @@ local function tooltipBreakdown(tooltip)
 				buildType = 'build'
 				unitHumanName = tooltip:sub(8,start-1)
 			end
-			unitDef = GetUnitDefByHumanName(unitHumanName)
+			unitDef = GetUnitDefByHumanName(unitHumanName, tooltip:find('BuildCo', 1, true) == 1)
 			
 			tooltip = tooltip:sub(fin+1)
 		end
@@ -1340,7 +1347,7 @@ local function tooltipBreakdown(tooltip)
 	elseif tooltip:find('Morph', 1, true) == 1 then
 		
 		local unitHumanName = tooltip:gsub('Morph into a (.*)(time).*', '%1'):gsub('[^%a \-]', '')
-		unitDef = GetUnitDefByHumanName(unitHumanName)
+		unitDef = GetUnitDefByHumanName(unitHumanName, false)
 		
 		local needunit
 		if tooltip:find('needs unit', 1, true) then

@@ -505,7 +505,8 @@ local moduleDefs = {
 		requireLevel = 2,
 		slotType = "module",
 		applicationFunction = function (modules, sharedData)
-			sharedData.shield = "commweapon_personal_shield"
+			-- Do not override area shield
+			sharedData.shield = sharedData.shield or "commweapon_personal_shield"
 		end
 	},
 	{
@@ -819,25 +820,25 @@ end
 -- clone which was given those modules.
 
 local function GetReconCloneModulesString(modulesByDefID)
-	return (modulesByDefID[moduleDefNames.damageBooster] or 0) .. 
+	return (modulesByDefID[moduleDefNames.module_dmg_booster] or 0) .. 
 		(modulesByDefID[moduleDefNames.commweapon_personal_shield] or 0)
 end
 
 local function GetSupportCloneModulesString(modulesByDefID)
-	return (modulesByDefID[moduleDefNames.damageBooster] or 0) .. 
+	return (modulesByDefID[moduleDefNames.module_dmg_booster] or 0) .. 
 		(modulesByDefID[moduleDefNames.commweapon_personal_shield] or 0) ..
 		(modulesByDefID[moduleDefNames.commweapon_areashield] or 0) ..
-		(modulesByDefID[moduleDefNames.resurrect] or 0)
+		(modulesByDefID[moduleDefNames.module_resurrect] or 0)
 end
 
 local function GetAssaultCloneModulesString(modulesByDefID)
-	return (modulesByDefID[moduleDefNames.damageBooster] or 0) .. 
+	return (modulesByDefID[moduleDefNames.module_dmg_booster] or 0) .. 
 		(modulesByDefID[moduleDefNames.commweapon_personal_shield] or 0) ..
 		(modulesByDefID[moduleDefNames.commweapon_areashield] or 0)
 end
 
 local function GetStrikeCloneModulesString(modulesByDefID)
-	return (modulesByDefID[moduleDefNames.damageBooster] or 0) .. 
+	return (modulesByDefID[moduleDefNames.module_dmg_booster] or 0) .. 
 		(modulesByDefID[moduleDefNames.commweapon_personal_shield] or 0) ..
 		(modulesByDefID[moduleDefNames.commweapon_areashield] or 0)
 end
@@ -1141,6 +1142,7 @@ local chassisDefs = {
 				chassisApplicationFunction = function (modules, sharedData)
 					-- All comms have 10 BP in their unitDef (even support)
 					sharedData.bonusBuildPower = (sharedData.bonusBuildPower or 0) + 2
+					sharedData.autorepairRate = (sharedData.autorepairRate or 0) + 5
 				end,
 				morphUnitDefFunction = function(modulesByDefID)
 					return UnitDefNames["dynsupport1_" .. GetSupportCloneModulesString(modulesByDefID)].id
@@ -1282,6 +1284,9 @@ local chassisDefs = {
 			[1] = {
 				morphBuildPower = 10,
 				morphBaseCost = 25,
+				chassisApplicationFunction = function (modules, sharedData)
+					sharedData.autorepairRate = (sharedData.autorepairRate or 0) + 5
+				end,
 				morphUnitDefFunction = function(modulesByDefID)
 					return UnitDefNames["dynassault1_" .. GetAssaultCloneModulesString(modulesByDefID)].id
 				end,
