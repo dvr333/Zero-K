@@ -150,6 +150,11 @@ return {
        reflection  = mix(light, reflection, extraColor.g); // reflection
        reflection += extraColor.rrr; // self-illum
 
+      //Backside glow. Seems to be a common western animation thing
+      float opac = 1.0 - abs(dot(normal, normalize(cameraDir)));
+      opac *= max((min(dot(normal, sunPos), 0.0) + 0.25) * 4, 0.0) * (max(dot(normalize(cameraDir), sunPos), 0.0));
+      specular += opac * opac * sunDiffuse;
+
        gl_FragColor     = texture2D(textureS3o1, gl_TexCoord[0].st);
        gl_FragColor.rgb = mix(gl_FragColor.rgb, teamColor.rgb, gl_FragColor.a); // teamcolor
        gl_FragColor.rgb = gl_FragColor.rgb * reflection + specular;
@@ -332,6 +337,11 @@ return {
 
        reflection  = mix(light, reflection, extraColor.g); // reflection
        reflection += extraColor.rrr; // self-illum
+
+      //Backside glow. Seems to be a common western animation thing
+      float opac = 1.0 - abs(dot(normal, normalize(cameraDir)));
+      opac *= max((min(dot(normal, sunPos), 0.0) + 0.25) * 4, 0.0) * (max(dot(normalize(cameraDir), sunPos), 0.0));
+      specular += opac * opac * sunDiffuse;
 
        gl_FragColor     = texture2D(textureS3o1, gl_TexCoord[0].st);
        gl_FragColor.rgb = mix(gl_FragColor.rgb, teamColor.rgb, gl_FragColor.a); // teamcolor

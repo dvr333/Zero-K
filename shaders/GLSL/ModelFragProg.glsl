@@ -47,7 +47,8 @@ void main(void)
 #endif
 	//vec3 light = max(dot(normal, sunDir) > 0.0 ? 1.0 : 0.0, 0.0) * sunDiffuse + sunAmbient;
 	//vec3 light = max(dot(normal, sunDir), 0.0) * sunDiffuse + sunAmbient;
-	vec3 light = (sqrt(max(dot(normal, sunDir) - 0.22, 0.0))) * sunDiffuse * 1.132 + sunAmbient;
+	float a = (sqrt(max(dot(normal, sunDir) - 0.22, 0.0))) * 1.132;
+	vec3 light = a * sunDiffuse + sunAmbient;
 
 	vec4 diffuse     = texture2D(textureS3o1, gl_TexCoord[0].st);
 	vec4 extraColor  = texture2D(textureS3o2, gl_TexCoord[0].st);
@@ -72,6 +73,11 @@ void main(void)
 	reflection  = mix(light, reflection, extraColor.g); // reflection
 	reflection += extraColor.rrr; // self-illum
 #endif
+
+	//Backside glow. Seems to be a common western animation thing
+  float opac = 1.0 - abs(dot(normal, normalize(cameraDir)));
+  opac *= max((min(dot(normal, sunDir), 0.0) + 0.25) * 4, 0.0) * (max(dot(normalize(cameraDir), sunDir), 0.0));
+  specular += opac * opac * sunDiffuse;
 
 	#if (DEFERRED_MODE == 0)
 	gl_FragColor     = diffuse;
