@@ -189,7 +189,7 @@ end
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
-local function DrawWorldFunc()
+local function DrawWorldFunc(drawBehind)
     if (smoothPolys) then
     glSmoothing(nil, nil, true)
   end
@@ -198,20 +198,48 @@ local function DrawWorldFunc()
 
   glUseShader(shader)
 
-  glDepthTest(true)
-
   glBlending(GL_SRC_ALPHA, GL_ONE)
 
   glPolygonOffset(-2, -2)
 
-  gl.Uniform(shaderFragZMinLoc, zMin)
-  gl.Uniform(shaderFragZMaxLoc, zMax)
+  local depthTest = true
+  if not drawBehind then
+    glDepthTest(true)
+    gl.Uniform(shaderFragZMinLoc, zMin)
+    gl.Uniform(shaderFragZMaxLoc, zMax)
+  else
+    depthTest = false
+    glDepthTest(GL.GREATER)
+    gl.Uniform(shaderFragZMinLoc, 0)
+    gl.Uniform(shaderFragZMaxLoc, 0)
+  end
 
   for _, teamID in ipairs(spGetTeamList()) do
     glColor(spGetTeamColor(teamID))
     for _, unitID in ipairs(spGetTeamUnits(teamID)) do
       if (spIsUnitVisible(unitID, nil, true)) then
-        glUnit(unitID, true)
+        if drawBehind then
+          local uvx, uvy, uvz = Spring.GetUnitViewPosition(unitID, true)
+          local ux, uy = Spring.WorldToScreenCoords(uvx, uvy, uvz)
+          local type, data = Spring.TraceScreenRay(ux, uy)
+          if (type ~= "unit") then
+            if depthTest then
+              depthTest = false
+              glDepthTest(GL.GREATER)
+              gl.Uniform(shaderFragZMinLoc, 0)
+              gl.Uniform(shaderFragZMaxLoc, 0)
+            end
+            glUnit(unitID, true)
+          end
+        else 
+          if not depthTest then
+            depthTest = true
+            glDepthTest(true)
+            gl.Uniform(shaderFragZMinLoc, zMin)
+            gl.Uniform(shaderFragZMaxLoc, zMax)
+          end
+          glUnit(unitID, true)
+        end
       end
     end
   end
@@ -236,6 +264,10 @@ local function DrawWorldFunc()
   if (smoothPolys) then
     glSmoothing(nil, nil, false)
   end
+end
+
+function widget:DrawWorldPreUnit()
+  DrawWorldFunc(true)
 end
 
 function widget:DrawWorld()
