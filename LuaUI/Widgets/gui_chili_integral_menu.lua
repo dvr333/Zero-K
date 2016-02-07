@@ -326,7 +326,7 @@ local n_states = {}
 
 --shortcuts
 local menuChoices = {
-	[1] = { array = n_common, name = "Order", hotkeyName = "Order" },
+	[1] = { array = n_common, name = "Order", hotkeyName = "Order", config = common_commands},
 	[2] = { array = n_factories, name = "Factory", hotkeyName = "Factory", config = factory_commands, actionName = "epic_chili_integral_menu_tab_factory" },
 	[3] = { array = n_econ, name = "Econ", hotkeyName = "Econ", config = econ_commands, actionName = "epic_chili_integral_menu_tab_economy" },
 	[4] = { array = n_defense, name = "Defense", hotkeyName = "Defense", config = defense_commands, actionName = "epic_chili_integral_menu_tab_defence" },
@@ -637,6 +637,7 @@ local function ProcessCommand(cmd)
 		if (cmd.type == CMDTYPE.ICON_MODE and cmd.params ~= nil and #cmd.params > 1) then 
 			n_states[#n_states+1] = cmd 
 		elseif common_commands[cmd.id] then 
+			Spring.Echo("Common_Command: "..cmd.id)
 			n_common[#n_common+1] = cmd
 		elseif factory_commands[cmd.id] then
 			n_factories[#n_factories+1] = cmd
@@ -649,6 +650,8 @@ local function ProcessCommand(cmd)
 		elseif cmd.id and UnitDefs[-(cmd.id)] then
 			n_units[#n_units+1] = cmd
 		else
+			Spring.Echo("Unclassified_Command: "..cmd.id)
+			cmd.row = 3
 			n_common[#n_common+1] = cmd	--shove unclassified stuff in common
 		end
 	end
@@ -1050,7 +1053,7 @@ local function Update(buttonpush)
 	table.sort(n_special, function(a,b) return special_commands[a.id].order < special_commands[b.id].order end)
 
 	ManageStateIcons()
-	ManageCommandIcons(useRowSort)
+	ManageCommandIcons()--useRowSort)
 end 
 
 local function MakeMenuTab(i, alpha)

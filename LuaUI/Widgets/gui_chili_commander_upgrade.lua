@@ -1004,6 +1004,8 @@ function widget:CommandsChanged()
 				action  = 'upgradecomm',
 				params  = {}, 
 				texture = 'LuaUI/Images/commands/Bold/upgrade.png',
+				row = 2,
+				col = 6,
 			}
 		else
 			Spring.Echo("Upgrade UI Debug - Commander Deselected")

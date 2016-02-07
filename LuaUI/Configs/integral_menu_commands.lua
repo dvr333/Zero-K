@@ -16,6 +16,23 @@ local tooltips = {
 	dropflag = "Drop flag on the ground.",
 }
 
+local basic = {
+	[CMD.MOVE] = 		{order = 1, row = 1, col = 1},
+	[CMD.STOP] = 		{order = 2, row = 1, col = 2},
+	[CMD.FIGHT] = 	{order = 3, row = 1, col = 3},
+	[CMD.ATTACK] = 	{order = 4, row = 1, col = 4},
+	[CMD.PATROL] =	{order = 5, row = 1, col = 5},
+	[CMD.GUARD] =		{order = 6, row = 1, col = 6},
+}
+
+local builder_basic = {
+	[CMD_AREA_MEX] =			{order = 7, row = 2, col = 1},
+	[CMD.REPAIR] = 				{order = 8, row = 2, col = 2},
+	[CMD.RECLAIM] =				{order = 9, row = 2, col = 3},
+	[CMD.RESURRECT] = 		{order = 10, row = 2, col = 4},
+	[CMD_UPGRADE_STOP] = 	{order = 12, row = 2, col = 6},
+}
+
 local factories = {
 	factorycloak =    {order = 1, row = 1, col = 1},
 	factoryshield =   {order = 2, row = 1, col = 2},
@@ -112,6 +129,15 @@ local function CopyBuildArray(source, target)
 	end
 end
 
+local function CopyArray(source, target)
+	for name, value in pairs(source) do
+		target[name] = value
+	end
+end
+
+CopyArray(basic, common_commands)
+CopyArray(builder_basic, common_commands)
+Spring.Echo(common_commands)
 CopyBuildArray(factories, factory_commands)
 CopyBuildArray(econ, econ_commands)
 CopyBuildArray(aux, special_commands)
