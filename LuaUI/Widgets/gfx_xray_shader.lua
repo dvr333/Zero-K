@@ -221,7 +221,7 @@ local function DrawWorldFunc(drawBehind)
         if drawBehind then
           local uvx, uvy, uvz = Spring.GetUnitViewPosition(unitID, true)
           local ux, uy = Spring.WorldToScreenCoords(uvx, uvy, uvz)
-          local type, data = Spring.TraceScreenRay(ux, uy)
+          local type, data = Spring.TraceScreenRay(ux, uy, false, false, false, true)
           if (type ~= "unit") then
             if depthTest then
               depthTest = false
@@ -261,6 +261,7 @@ local function DrawWorldFunc(drawBehind)
 
   glColor(1, 1, 1, 1)
 
+  gl.Culling(false)
   if (smoothPolys) then
     glSmoothing(nil, nil, false)
   end
