@@ -176,7 +176,7 @@ void main(void)
 
    float opac = dot(normal, normalize(vertexWorldPos.xyz - cameraPos));
    opac = (abs(opac));
-	 opac = opac * opac;
+	 opac = opac * opac * opac;
    gl_FragColor.rgb = teamColor.rgb;
    gl_FragColor.a = opac;
 
@@ -987,6 +987,7 @@ function widget:DrawWorld()
 			gl.Rotate(90 * bface, 0, 1, 0)
 			gl.UnitShape(mexDefID, Spring.GetMyTeamID(), true)--, true, false)
 			gl.UseShader(0)
+			gl.Culling(false)
 			gl.PopMatrix()
 			
 			gl.DepthTest(false)
