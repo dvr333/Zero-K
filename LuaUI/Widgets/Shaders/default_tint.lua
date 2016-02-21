@@ -33,10 +33,10 @@ return
       normalv = gl_NormalMatrix * gl_Normal;
     #endif
 
-      gl_ClipVertex  = gl_ModelViewMatrix * gl_Vertex; // M (!)
+      //gl_ClipVertex  = gl_ModelViewMatrix * gl_Vertex; // M (!)
       gl_Position    = gl_ProjectionMatrix * gl_ClipVertex;
 
-      vertexWorldPos = gl_ClipVertex;
+      vertexWorldPos = gl_ModelViewMatrix * gl_Vertex;
       cameraDir      = vertexWorldPos.xyz - cameraPos;
 
     #if (USE_SHADOWS == 1)
@@ -55,7 +55,7 @@ return
   ]],
   fragment= [[
     #version 120
-    
+
   //#define use_normalmapping
   //#define flip_normalmap
   //#define use_shadows
