@@ -2,6 +2,8 @@
 return
 {
   vertex = [[
+    #version 120
+
     uniform vec3 cameraPos;
     #if (USE_SHADOWS == 1)
       uniform mat4 shadowMatrix;
@@ -52,6 +54,8 @@ return
     }
   ]],
   fragment= [[
+    #version 120
+    
   //#define use_normalmapping
   //#define flip_normalmap
   //#define use_shadows
