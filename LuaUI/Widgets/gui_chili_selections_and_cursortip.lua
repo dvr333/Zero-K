@@ -58,6 +58,10 @@ local strFormat 				= string.format
 include("keysym.h.lua")
 VFS.Include("LuaRules/Configs/customcmds.h.lua")
 VFS.Include("LuaRules/Utilities/numberfunctions.lua")
+VFS.Include("LuaRules/Utilities/unitDefReplacements.lua")
+local GetUnitBuildSpeed = Spring.Utilities.GetUnitBuildSpeed
+local GetHumanName = Spring.Utilities.GetHumanName
+local GetUnitCost = Spring.Utilities.GetUnitCost
 
 local transkey = include("Configs/transkey.lua")
 
@@ -715,7 +719,7 @@ local function UpdateDynamicGroupInfo()
 
 			if name ~= "terraunit" then
 				if hp then--failsafe when switching spectator view.
-					total_cost = total_cost + Spring.Utilities.GetUnitCost(id, defID)*build
+					total_cost = total_cost + GetUnitCost(id, defID)*build
 					total_hp = total_hp + hp
 				end
 				
@@ -761,9 +765,9 @@ local function UpdateStaticGroupInfo()
 		ud = UnitDefs[defID]
 		if ud then
 			if ud.name ~= "terraunit" then
-				total_totalbp = total_totalbp + ud.buildSpeed * (Spring.GetUnitRulesParam(unitID, "buildpower_mult") or 1)
-				total_maxhp = total_maxhp + select(2, Spring.GetUnitHealth(unitID))
-				total_finishedcost = total_finishedcost + Spring.Utilities.GetUnitCost(unitID, defID)
+				total_totalbp = total_totalbp + GetUnitBuildSpeed(unitID, defID)
+				total_maxhp = total_maxhp + (select(2, Spring.GetUnitHealth(unitID)) or 0)
+				total_finishedcost = total_finishedcost + GetUnitCost(unitID, defID)
 			end
 		end
 	end
@@ -919,7 +923,7 @@ local function AddSelectionIcon(index,unitid,defid,unitids,counts)
 		squareData.unitid = unitid
 		squareData.unitids = unitids
 		
-		squareData.image.tooltip = Spring.Utilities.GetHumanName(unitid, ud) .. " - " .. ud.tooltip.. "\n\255\0\255\0Left Click: Select \nRight Click: Deselect \nShift+Left Click: Select Type\nShift+Right Click: Deselect Type \nMiddle-click: Goto"
+		squareData.image.tooltip = GetHumanName(unitid, ud) .. " - " .. ud.tooltip.. "\n\255\0\255\0Left Click: Select \nRight Click: Deselect \nShift+Left Click: Select Type\nShift+Right Click: Deselect Type \nMiddle-click: Goto"
 		squareData.image.file2 = (WG.GetBuildIconFrame)and(WG.GetBuildIconFrame(UnitDefs[defid]))
 		squareData.image.file = "#" .. defid
 		
@@ -993,7 +997,7 @@ local function AddSelectionIcon(index,unitid,defid,unitids,counts)
 		squareData.image = Image:New{
 			name = "selImage";
 			parent  = squareData.panel;
-			tooltip = Spring.Utilities.GetHumanName(unitid, ud) .. " - " .. ud.tooltip.. "\n\255\0\255\0Left Click: Select \nRight Click: Deselect \nShift+Left Click: Select Type\nShift+Right Click: Deselect Type \nMiddle-click: Goto";
+			tooltip = GetHumanName(unitid, ud) .. " - " .. ud.tooltip.. "\n\255\0\255\0Left Click: Select \nRight Click: Deselect \nShift+Left Click: Select Type\nShift+Right Click: Deselect Type \nMiddle-click: Goto";
 			file2   = (WG.GetBuildIconFrame)and(WG.GetBuildIconFrame(UnitDefs[defid]));
 			file    = "#" .. defid;
 			keepAspect = false;
@@ -1374,15 +1378,45 @@ end
 --tooltip functions
 ----------------------------------------------------------------
 
-local function SetHealthbar(tt_healthbar,health, maxhealth)
+local function SetHealthbar(tt_healthbar,health, maxhealth, unitID)
 	if health and maxhealth and (maxhealth > 0) then
 		tt_health_fraction = health/maxhealth
 		tt_healthbar.color = GetHealthColor(tt_health_fraction)
 		tt_healthbar:SetValue(tt_health_fraction)
+
+		local regenStr = ""
+		if unitID and (health < maxhealth) and (not select(3, spGetUnitIsStunned(unitID))) then
+			local ud = UnitDefs[Spring.GetUnitDefID(unitID)]
+			local regen_timer = Spring.GetUnitRulesParam(unitID, "idleRegenTimer")
+			if regen_timer then
+				if ((ud.idleTime <= 300) and (regen_timer > 0)) then
+					regenStr = "  (" .. math.ceil(regen_timer / 30) .. "s)"
+				else
+					local regen = 0
+					if (regen_timer <= 0) then
+						regen = regen + (spGetUnitRulesParam(unitID, "comm_autorepair_rate") or ud.customParams.idle_regen)
+					end
+					if ud.customParams.amph_regen then
+						local x,y,z = Spring.GetUnitPosition(unitID)
+						local h = Spring.GetGroundHeight(x,z) or y
+						if (h < 0) then
+							regen = regen + math.min(ud.customParams.amph_regen, ud.customParams.amph_regen*(-h / ud.customParams.amph_submerged_at))
+						end
+					end
+					if ud.customParams.armored_regen and Spring.GetUnitArmored(unitID) then
+						regen = regen + ud.customParams.armored_regen
+					end
+					if (regen > 0) then
+						regenStr = "  (+" .. math.ceil(regen) .. ")"
+					end
+				end
+			end
+		end
+
 		if options.hpshort.value then
-			tt_healthbar:SetCaption(numformat(health) .. ' / ' .. numformat(maxhealth))
+			tt_healthbar:SetCaption(numformat(health) .. ' / ' .. numformat(maxhealth) .. regenStr)
 		else
-			tt_healthbar:SetCaption(math.ceil(health) .. ' / ' .. math.ceil(maxhealth))
+			tt_healthbar:SetCaption(math.ceil(health) .. ' / ' .. math.ceil(maxhealth) .. regenStr)
 		end
 		
 	else
@@ -1409,7 +1443,7 @@ local function SetHealthbars()
 	if tt_unitID then
 		health, maxhealth = spGetUnitHealth(tt_unitID)
 		tt_healthbar = globalitems.hp_unit:GetChildByName('bar')
-		SetHealthbar(tt_healthbar,health, maxhealth)
+		SetHealthbar(tt_healthbar,health, maxhealth, tt_unitID)
 	elseif tt_fid then
 		health, maxhealth = Spring.GetFeatureHealth(tt_fid)
 		tt_healthbar_stack = tt_ud and globalitems.hp_corpse or globalitems.hp_feature
@@ -1420,7 +1454,7 @@ local function SetHealthbars()
 	if stt_unitID then
 		health, maxhealth = spGetUnitHealth(stt_unitID)
 		tt_healthbar = globalitems.hp_selunit:GetChildByName('bar')
-		SetHealthbar(tt_healthbar,health, maxhealth)
+		SetHealthbar(tt_healthbar,health, maxhealth, stt_unitID)
 	end
 end
 
@@ -1997,7 +2031,7 @@ local function MakeToolTip_Unit(data, tooltip)
 	local unitDefID = spGetUnitDefID(tt_unitID)
 	tt_ud = UnitDefs[ unitDefID or -1]
 	
-	fullname = ((tt_ud and Spring.Utilities.GetHumanName(tt_unitID, tt_ud)) or "")	
+	fullname = ((tt_ud and GetHumanName(tt_unitID, tt_ud)) or "")	
 		
 	if not (tt_ud) then
 		--fixme
@@ -2024,7 +2058,7 @@ local function MakeToolTip_Unit(data, tooltip)
 	local tt_structure = {
 		leftbar = {
 			{ name= 'bp', directcontrol = 'buildpic_unit' },
-			{ name= 'cost', icon = 'LuaUI/images/ibeam.png', text = cyan .. numformat((Spring.Utilities.GetUnitCost(tt_unitID, unitDefID)) or '0') },
+			{ name= 'cost', icon = 'LuaUI/images/ibeam.png', text = cyan .. numformat((GetUnitCost(tt_unitID, unitDefID)) or '0') },
 			
 			{ name='res_m', icon = 'LuaUI/images/metalplus.png', text = m },
 			{ name='res_e', icon = 'LuaUI/images/energy.png', text = e },
@@ -2060,7 +2094,7 @@ local function MakeToolTip_SelUnit(data, tooltip)
 		return false
 	end
 
-	local fullname = Spring.Utilities.GetHumanName(stt_unitID, stt_ud)	
+	local fullname = GetHumanName(stt_unitID, stt_ud)	
 	
 	local unittooltip	= GetUnitDesc(stt_unitID, stt_ud)
 	
@@ -2073,7 +2107,7 @@ local function MakeToolTip_SelUnit(data, tooltip)
 	local tt_structure = {
 		leftbar = {
 			{ name= 'bp', directcontrol = 'buildpic_selunit' },
-			{ name= 'cost', icon = 'LuaUI/images/ibeam.png', text = cyan .. numformat((Spring.Utilities.GetUnitCost(stt_unitID, uDefID)) or '0') },
+			{ name= 'cost', icon = 'LuaUI/images/ibeam.png', text = cyan .. numformat((GetUnitCost(stt_unitID, uDefID)) or '0') },
 			
 			{ name='res_m', icon = 'LuaUI/images/metalplus.png', text = m },
 			{ name='res_e', icon = 'LuaUI/images/energy.png', text = e },
@@ -2118,7 +2152,7 @@ local function MakeToolTip_Feature(data, tooltip)
 		desc = ' (wreckage)'
 	end
 	tt_ud = UnitDefNames[live_name]
-	fullname = ((tt_ud and Spring.Utilities.GetHumanName(tt_unitID, tt_ud) .. desc) or tt_fd.tooltip or "")
+	fullname = ((tt_ud and GetHumanName(tt_unitID, tt_ud) .. desc) or tt_fd.tooltip or "")
 	
 	if not (tt_fd) then
 		--fixme
@@ -2563,10 +2597,16 @@ function widget:Update(dt)
 			local shieldPower = Spring.GetUnitRulesParam(stt_unitID, "comm_shield_max") or stt_ud.shieldPower
 			if shieldbar and shieldPower and (shieldPower > 0) then
 				local shieldEnabled, shieldCurrentPower = Spring.GetUnitShieldState(stt_unitID, Spring.GetUnitRulesParam(stt_unitID, "comm_shield_num") or -1)
-				
-				shieldbar:SetValue((shieldCurrentPower or 0) / shieldPower,true)
+
+				local wd = WeaponDefs[UnitDefs[Spring.GetUnitDefID(stt_unitID)].shieldWeaponDef]
+				local regen = ""
+				if shieldCurrentPower < shieldPower then
+					regen = " (+" .. (wd.customParams.shield_rate or wd.shieldPowerRegen) .. ")"
+				end
+
+				shieldbar:SetValue(shieldCurrentPower / shieldPower,true)
 				if shieldEnabled then
-					shieldbar:SetCaption(math.floor(shieldCurrentPower) .. ' / ' .. shieldPower)
+					shieldbar:SetCaption(math.floor(shieldCurrentPower) .. ' / ' .. shieldPower .. regen)
 				else
 					shieldbar:SetCaption('Shield offline')
 				end

@@ -383,7 +383,7 @@ local function getHelpText(unitDef)
 end	
 
 
-local function getDescription(unitDef)
+local function getDescription(unitDef, unitID)
 	local data = WG.langData
 	local lang = (WG.lang and WG.lang()) or "en"
 	local desc
@@ -396,9 +396,17 @@ local function getDescription(unitDef)
 		desc = unitDef.customParams and unitDef.customParams['description' .. suffix] or unitDef.tooltip or 'Description error'
 		font = nil
 	end
-		
-	return desc, font
 	
+	if unitID then
+		local buildPower = Spring.GetUnitRulesParam(unitID, "buildpower_mult")
+		if buildPower then
+			buildPower = buildPower*10
+			desc = string.sub(desc, 0, (string.find(desc, "Builds at") or 100) - 1)
+			desc = desc .. "Builds at " .. buildPower .. " m/s"
+		end
+	end
+	
+	return desc, font
 end	
 
 local function GetShieldRegenDrain(wd)
@@ -813,7 +821,7 @@ local function printAbilities(ud, unitID)
 	local cp = ud.customParams
 
 	
-	if ud.buildSpeed > 0 then
+	if ud.buildSpeed > 0 and not cp.nobuildpower then
 		local buildSpeed = ud.buildSpeed * (unitID and Spring.GetUnitRulesParam(unitID, "buildpower_mult") or 1)
 		cells[#cells+1] = 'Construction'
 		cells[#cells+1] = ''
@@ -952,19 +960,20 @@ local function printAbilities(ud, unitID)
 		cells[#cells+1] = ''
 	end
 
-	local idle_autoheal = ud.customParams.idle_regen and tonumber(ud.customParams.idle_regen) or (ud.idleAutoHeal * 2)
-	if (ud.idleTime < 1800) or (idle_autoheal > 5) or (ud.autoHeal > 0) or (cp.amph_regen) or (cp.armored_regen) then
+	if (ud.idleTime < 1800) or (cp.amph_regen) or (cp.armored_regen) then
 		cells[#cells+1] = 'Improved regeneration'
 		cells[#cells+1] = ''
-		if ud.idleTime < 1800 or (idle_autoheal > 5) then
-			cells[#cells+1] = ' - Idle regen: '
-			cells[#cells+1] = numformat(idle_autoheal) .. ' HP/s'
-			cells[#cells+1] = ' - Time to enable: '
-			cells[#cells+1] = numformat(ud.idleTime / 30) .. 's'
-		end
-		if ud.autoHeal > 0 then
-			cells[#cells+1] = ' - Combat regen: '
-			cells[#cells+1] = numformat(ud.autoHeal * 2) .. ' HP/s'
+		if ud.idleTime < 1800 then
+			if ud.idleTime > 0 then
+				cells[#cells+1] = ' - Idle regen: '
+				cells[#cells+1] = numformat(cp.idle_regen) .. ' HP/s'
+				cells[#cells+1] = ' - Time to enable: '
+				cells[#cells+1] = numformat(ud.idleTime / 30) .. 's'
+			else
+				cells[#cells+1] = ' - Combat regen: '
+				local dynamic_regen = unitID and Spring.GetUnitRulesParam(unitID, "comm_autorepair_rate") or cp.idle_regen
+				cells[#cells+1] = numformat(dynamic_regen) .. ' HP/s'
+			end
 		end
 		if cp.amph_regen then
 			cells[#cells+1] = ' - Water regen: '
@@ -1166,7 +1175,6 @@ local function printWeapons(unitDef, unitID)
 				end
 			end
 
-			local weaponName = weaponDef.description or 'Weapon'
 			local isDuplicate = false
 
 			for i=1,#weaponStats do
@@ -1177,7 +1185,7 @@ local function printWeapons(unitDef, unitID)
 				end
 			end
 			
-			if (not isDuplicate) and not(weaponName:find('fake') or weaponName:find('Fake') or weaponName:find('Bogus') or weaponName:find('NoWeapon')) then 
+			if (not isDuplicate) and not weaponDef.customParams.fake_weapon then 
 				local wsTemp = {
 					weaponID = weaponID,
 					count = 1,
@@ -1276,7 +1284,7 @@ local function printunitinfo(ud, lang, buttonWidth, unitID)
 		statschildren[#statschildren+1] = Label:New{ caption = "COMMANDER", textColor = color.stats_header, }
 		statschildren[#statschildren+1] = Label:New{ caption = '', textColor = color.stats_header, }
 		statschildren[#statschildren+1] = Label:New{ caption = 'Level: ', textColor = color.stats_fg, }
-		statschildren[#statschildren+1] = Label:New{ caption = Spring.GetUnitRulesParam(unitID, "comm_level"), textColor = color.stats_fg, }
+		statschildren[#statschildren+1] = Label:New{ caption = Spring.GetUnitRulesParam(unitID, "comm_level")+1, textColor = color.stats_fg, }
 		statschildren[#statschildren+1] = Label:New{ caption = 'Chassis: ', textColor = color.stats_fg, }
 		statschildren[#statschildren+1] = Label:New{ caption = chassisDefs[Spring.GetUnitRulesParam(unitID, "comm_chassis")].humanName, textColor = color.stats_fg, }
 		statschildren[#statschildren+1] = Label:New{ caption = '', textColor = color.stats_header,}
@@ -1636,7 +1644,7 @@ MakeStatsWindow = function(ud, x,y, unitID)
 		window_unitstats:Dispose()
 	end
 
-	local desc, font = getDescription(ud)
+	local desc, font = getDescription(ud, unitID)
 	
 	statswindows[num] = Window:New{  
 		x = x,

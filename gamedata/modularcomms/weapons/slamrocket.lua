@@ -18,6 +18,9 @@ local weaponDef = {
 		slot = [[3]],
 		muzzleEffectFire = [[custom:SLAM_MUZZLE]],
 		manualfire = 1,
+		
+		light_camera_height = 2500,
+		light_color = [[1 0.8 0.2]],
 	},
 	cylinderTargeting       = 1.0,
 
@@ -43,7 +46,6 @@ local weaponDef = {
 	soundHit                = [[weapon/bomb_hit]],
 	soundStart              = [[weapon/missile/missile_fire2]],
 	startVelocity           = 0,
- 	texture1                = [[flare]],
 	targetBorder            = 1,
 	tolerance               = 4000,
 	turret                  = true,

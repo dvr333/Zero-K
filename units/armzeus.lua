@@ -94,6 +94,10 @@ unitDef = {
 
       customParams            = {
         extra_damage = [[240]],
+		
+		light_camera_height = 1600,
+		light_color = [[0.85 0.85 1.2]],
+		light_radius = 200,
       },
 
       cylinderTargeting      = 0,
@@ -119,7 +123,7 @@ unitDef = {
       rgbColor                = [[0.5 0.5 1]],
       soundStart              = [[weapon/more_lightning_fast]],
       soundTrigger            = true,
-      sprayAngle              = 1200,
+      sprayAngle              = 900,
       texture1                = [[lightning]],
       thickness               = 10,
       turret                  = true,

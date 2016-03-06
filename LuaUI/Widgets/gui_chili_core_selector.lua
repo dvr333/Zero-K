@@ -17,6 +17,10 @@ end
 
 VFS.Include("LuaRules/Configs/customcmds.h.lua")
 
+Spring.Utilities = Spring.Utilities or {}
+VFS.Include("LuaRules/Utilities/unitDefReplacements.lua")
+local GetUnitCanBuild = Spring.Utilities.GetUnitCanBuild
+
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 local GetUnitDefID      = Spring.GetUnitDefID
@@ -101,9 +105,37 @@ end
 local function RefreshConsList() end	-- redefined later
 local function ClearData(reinitialize) end
 
+local hidden = false
+local function CheckHide()
+	local shouldShow = (options.showCoreSelector.value == 'always') or (options.showCoreSelector.value == 'spec' and (not Spring.GetSpectatingState()))
+
+	if shouldShow and hidden then
+		hidden = false
+		screen0:AddChild(window_selector)
+	elseif not shouldShow and not hidden then
+		hidden = true
+		screen0:RemoveChild(window_selector)
+	end
+end
+
+function widget:PlayerChanged()
+	CheckHide()
+end
+
 options_path = 'Settings/HUD Panels/Quick Selection Bar'
-options_order = { 'maxbuttons', 'monitoridlecomms', 'leftMouseCenter', 'monitoridlenano', 'lblSelection', 'selectcomm', 'hideWindow'}
+options_order = { 'showCoreSelector', 'maxbuttons', 'monitoridlecomms', 'leftMouseCenter', 'monitoridlenano', 'lblSelection', 'selectcomm'}
 options = {
+	showCoreSelector = {
+		name = 'Selection Bar Visibility',
+		type = 'radioButton',
+		value = 'spec',
+		items = {
+			{key ='always', name='Always enabled'},
+			{key ='spec',   name='Hide when spectating'},
+			{key ='never',  name='Always disabled'},
+		},
+		OnChange = CheckHide,
+	},
 	maxbuttons = {
 		name = 'Maximum number of buttons (3-16)',
 		type = 'number',
@@ -139,21 +171,6 @@ options = {
 		action = 'selectcomm',
 		path = 'Game/Selection Hotkeys',
 		dontRegisterAction = true,
-	},
-	
-	hideWindow = { type = 'button',
-		name = 'Hide Window',
-		type = 'bool',
-		value = false,
-		advanced = true,
-		OnChange = function(self)
-			if not self.value then
-				screen0:AddChild(window_selector)
-			else
-				screen0:RemoveChild(window_selector)
-			end
-			
-		end
 	},
 }
 
@@ -775,13 +792,15 @@ function widget:UnitFinished(unitID, unitDefID, unitTeam)
 		return
 	end
 	local ud = UnitDefs[unitDefID]
-	if ud.buildSpeed > 0 then  --- can build
+	if GetUnitCanBuild(unitID, unitDefID) then  --- can build
 		local bQueue = GetFullBuildQueue(unitID)
 		if not bQueue[1] then  --- has no build queue
 			local _, _, _, _, buildProg = GetUnitHealth(unitID)
 			if not ud.isFactory then
 				local cQueue = Spring.GetCommandQueue(unitID, 1)
+				--Spring.Echo("Con "..unitID.." queue "..tostring(cQueue[1]))
 				if not cQueue[1] then
+					--Spring.Echo("\tCon "..unitID.." must be idle")
 					widget:UnitIdle(unitID, unitDefID, myTeamID)
 				end
 			end
@@ -826,6 +845,18 @@ function widget:UnitIdle(unitID, unitDefID, unitTeam)
 	end
 end
 
+-- Check current cmdID and the queue 
+local function isDoubleWait(unitID, cmdID)
+	if cmdID==CMD.WAIT then
+		local cmdsLen=Spring.GetCommandQueue(unitID,0)
+		if cmdsLen==1 then
+			local cmds=Spring.GetCommandQueue(unitID,1)
+			return cmds[1].id==CMD.WAIT
+		end
+	end
+	return false
+end
+
 function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdOpts, cmdParams)
 	if (not myTeamID or unitTeam ~= myTeamID) then
 		return
@@ -833,6 +864,14 @@ function widget:UnitCommand(unitID, unitDefID, unitTeam, cmdID, cmdOpts, cmdPara
 	if cmdID and stateCommands[cmdID] then
 		return
 	end
+	
+	-- Double wait means the same as an empty queue
+	-- It is just an engine hack
+	if isDoubleWait(unitID,cmdID) then
+		widget:UnitIdle(unitID,unitDefID,unitTeam)
+		return
+	end
+	
 	if idleCons[unitID] then
 		idleCons[unitID] = nil
 		wantUpdateCons = true
@@ -1056,6 +1095,9 @@ function widget:Initialize()
 	self:ViewResize(viewSizeX, viewSizeY)
 	
 	InitializeUnits()
+	
+	hidden = false
+	CheckHide()
 end
 
 function widget:Shutdown()

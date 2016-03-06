@@ -13,18 +13,19 @@ function gadget:GetInfo() return {
 local spGetUnitIsStunned  = Spring.GetUnitIsStunned
 local spGetUnitHealth     = Spring.GetUnitHealth
 local spSetUnitHealth     = Spring.SetUnitHealth
+local spGetUnitRulesParam = Spring.GetUnitRulesParam
+local spSetUnitRulesParam = Spring.SetUnitRulesParam
 
 local units = {}
 local regenDefs = {}
+local losTable = {inlos = true}
 
 for id, def in pairs(UnitDefs) do
-	if def.customParams.idle_regen then
-		regenDefs[id] = {idleTime = def.idleTime, rate = def.customParams.idle_regen / 2 }
-	end
+	regenDefs[id] = {idleTime = def.idleTime, rate = def.customParams.idle_regen / 2 }
 end
 
 local currentFrame
-function gadget:Initialize ()
+function gadget:Initialize()
 	currentFrame = Spring.GetGameFrame()
 end
 
@@ -32,10 +33,13 @@ function gadget:GameFrame (frame)
 	currentFrame = frame
 	if ((frame % 15) == 7) then
 		for unitID, data in pairs(units) do
-			if (data.idleFrame < frame) and (not spGetUnitIsStunned(unitID)) then
-				local health = spGetUnitHealth(unitID) + data.rate
+			if (data.idleFrame < frame) and (not spGetUnitIsStunned(unitID)) and (spGetUnitRulesParam(unitID, "disarmed") ~= 1) then
+				local slowMult = (1-(spGetUnitRulesParam(unitID,"slowState") or 0))
+				local amount = data.rate * slowMult
+				local health = spGetUnitHealth(unitID) + amount
 				spSetUnitHealth(unitID, health)
 			end
+			spSetUnitRulesParam(unitID, "idleRegenTimer", data.idleFrame - frame, losTable)
 		end
 	end
 end
@@ -45,9 +49,8 @@ local function SetUnitIdleRegen(unitID, idleTime, idleRate)
 end
 
 function gadget:UnitCreated(unitID, unitDefID)
-	if regenDefs[unitDefID] then
-		SetUnitIdleRegen(unitID, regenDefs[unitDefID].idleTime, regenDefs[unitDefID].rate)
-	end
+	SetUnitIdleRegen(unitID, regenDefs[unitDefID].idleTime, regenDefs[unitDefID].rate)
+
 	local regen = Spring.GetUnitRulesParam(unitID, "comm_autorepair_rate")
 	if regen then
 		SetUnitIdleRegen(unitID, 0, regen / 2)
@@ -55,8 +58,9 @@ function gadget:UnitCreated(unitID, unitDefID)
 end
 
 function gadget:UnitDamaged(unitID, unitDefID, unitTeam, damage)
-	if regenDefs[unitDefID] and units[unitID] then
+	if units[unitID] then
 		units[unitID].idleFrame = currentFrame + units[unitID].idleTime
+		spSetUnitRulesParam(unitID, "idleRegenTimer", units[unitID].idleTime, losTable)
 	end
 end
 
