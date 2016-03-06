@@ -112,8 +112,8 @@ void main(void)
 		lightScale *= ((vectorDot < cutoffDot)? 0.0: 1.0);
 
 		gl_FragColor.rgb += (lightScale *                                  gl_LightSource[BASE_DYNAMIC_MODEL_LIGHT + i].ambient.rgb);
-		gl_FragColor.rgb += (lightScale * lightAttenuation * (diffuse.rgb * gl_LightSource[BASE_DYNAMIC_MODEL_LIGHT + i].diffuse.rgb * sqrt(max(lightCosAngDiff - 0.22, 0.0)) * 1.132));
-		gl_FragColor.rgb += (lightScale * lightAttenuation * (specular.rgb * gl_LightSource[BASE_DYNAMIC_MODEL_LIGHT + i].specular.rgb * pow(lightCosAngSpec, 4.0)));
+		gl_FragColor.rgb += (lightScale * lightAttenuation * (diffuse.rgb * gl_LightSource[BASE_DYNAMIC_MODEL_LIGHT + i].diffuse.rgb);// * sqrt(max(lightCosAngDiff - 0.22, 0.0)) * 1.132));
+		gl_FragColor.rgb += (lightScale * lightAttenuation * (specular.rgb * gl_LightSource[BASE_DYNAMIC_MODEL_LIGHT + i].specular.rgb);// * pow(lightCosAngSpec, 4.0)));
 	}
 	#endif
 
