@@ -135,9 +135,13 @@ float GetFilterRadius(vec2 uv)
 float GetEdgeNearFilterRadius(vec2 uv, vec2 stepVal)
 {
   vec2 maxCoordsOffset = stepVal * maxFilterRadius * KERNEL_RADIUS;
-  float edgeRadius = min(GetFilterRadius(uv + maxCoordsOffset), GetFilterRadius(uv - maxCoordsOffset));
-  float halfEdgeRadius = min(GetFilterRadius(uv + maxCoordsOffset / 2), 
-                  GetFilterRadius(uv - maxCoordsOffset / 2));
+  vec2 maxCoordsOffsetPerp = vec2(stepVal.y, -stepVal.x) * maxFilterRadius * KERNEL_RADIUS;
+  float edgeRadius = 
+  min(min(GetFilterRadius(uv + maxCoordsOffset), GetFilterRadius(uv - maxCoordsOffset)),
+  min(GetFilterRadius(uv + maxCoordsOffsetPerp), GetFilterRadius(uv - maxCoordsOffsetPerp)));
+  float halfEdgeRadius = 
+  min(min(GetFilterRadius(uv + maxCoordsOffset / 2), GetFilterRadius(uv - maxCoordsOffset / 2)),
+  min(GetFilterRadius(uv + maxCoordsOffsetPerp / 2), GetFilterRadius(uv - maxCoordsOffsetPerp / 2)));
   return min(edgeRadius, halfEdgeRadius);
 }
 
@@ -324,7 +328,9 @@ void main()
     vec4 valG = vec4(0,0,0,0);
     vec4 valB = vec4(0,0,0,0);
     vec4 valA = vec4(0,0,0,0);
-    float filterRadius = min(GetFilterRadius(uv), GetEdgeNearFilterRadius(uv, stepVal));
+    float baseFilterRadius = GetFilterRadius(uv);
+    float filterRadius = min(baseFilterRadius, GetEdgeNearFilterRadius(uv, stepVal));
+    filterRadius = min(filterRadius, GetEdgeNearFilterRadius(uv, vec2(stepVal.y, 0.0));
     float targetFilterRadius = 0.0;
     int compI = 0;
     for (int i=-KERNEL_RADIUS; i <=KERNEL_RADIUS; ++i)
@@ -350,6 +356,7 @@ void main()
       valB.xy += imageTexelRGB.b * c0_c1.xy;
       valB.zw += imageTexelRGB.b * c0_c1.zw;
       float alpha = FocusThresholdMixFactor(-targetFilterRadius, inFocusThreshold);
+      alpha = min(alpha, clamp(abs(targetFilterRadius - baseFilterRadius) / 0.05, 0.0, 1.0));
       valA.xy += alpha * c0_c1.xy;
       valA.zw += alpha * c0_c1.zw;
     }
@@ -370,6 +377,7 @@ void main()
     vec4 valB = vec4(0,0,0,0);
     vec4 valA = vec4(0,0,0,0);
     float filterRadius = min(GetFilterRadius(uv), GetEdgeNearFilterRadius(uv, stepVal));
+    filterRadius = min(filterRadius, GetEdgeNearFilterRadius(uv, vec2(stepVal.x, 0.0));
     float targetFilterRadius = 0.0;
     int compI = 0;
     for (int i=-KERNEL_RADIUS; i <=KERNEL_RADIUS; ++i)
